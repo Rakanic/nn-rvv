@@ -1,8 +1,8 @@
 CC = riscv64-unknown-elf-gcc
 
 MNIST_CFLAGS = \
-  -I./../../tests/saturn_tests/env \
-  -I./../../tests/saturn_tests/common \
+  -I./../../generators/saturn/benchmarks/env \
+  -I./../../generators/saturn/benchmarks/common \
   -I./src \
   -I./layers \
   -I./models/mnist_models \
@@ -14,7 +14,7 @@ MNIST_CFLAGS = \
 
 MNIST_LDFLAGS = \
   -static -nostdlib -nostartfiles -lm -lgcc \
-  -T ./../../tests/saturn_tests/common/test.ld
+  -T ./../../generators/saturn/benchmarks/common/test.ld
 
 # list all your .c/.S files automatically
 SRC_DIRS := \
@@ -28,8 +28,8 @@ SRC_DIRS := \
   src/matmul \
   src/conv2d \
   src/transpose \
-  ../../tests/saturn_tests/common \
-  ../../tests/saturn_tests/common/ara
+  ../../generators/saturn/benchmarks/common \
+  ../../generators/saturn/benchmarks/common/ara
 
 SRCS := $(foreach d,$(SRC_DIRS),$(wildcard $(d)/*.c $(d)/*.S))
 
@@ -38,8 +38,8 @@ MNIST_OUT = mnist.riscv
 
 
 MNIST_CNN_CFLAGS = \
-  -I./../../tests/saturn_tests/env \
-  -I./../../tests/saturn_tests/common \
+  -I./../../generators/saturn/benchmarks/env \
+  -I./../../generators/saturn/benchmarks/common \
   -I./src \
   -I./layers \
   -I./models/mnist_models \
@@ -51,7 +51,7 @@ MNIST_CNN_CFLAGS = \
 
 MNIST_CNN_LDFLAGS = \
   -static -nostdlib -nostartfiles -lm -lgcc \
-  -T ./../../tests/saturn_tests/common/test.ld
+  -T ./../../generators/saturn/benchmarks/common/test.ld
 
 # list all your .c/.S files automatically
 MNIST_CNN_SRC_DIRS := \
@@ -65,8 +65,8 @@ MNIST_CNN_SRC_DIRS := \
   src/matmul \
   src/conv2d \
   src/transpose \
-  ../../tests/saturn_tests/common \
-  ../../tests/saturn_tests/common/ara
+  ../../generators/saturn/benchmarks/common \
+  ../../generators/saturn/benchmarks/common/ara
 
 MNIST_CNN_SRCS := $(foreach d,$(MNIST_CNN_SRC_DIRS),$(wildcard $(d)/*.c $(d)/*.S $(d)/*.h))
 
@@ -74,8 +74,8 @@ MNIST_CNN_OUT = mnist_cnn.riscv
 
 
 MNIST_QCNN_CFLAGS = \
-  -I./../../tests/saturn_tests/env \
-  -I./../../tests/saturn_tests/common \
+  -I./../../generators/saturn/benchmarks/env \
+  -I./../../generators/saturn/benchmarks/common \
   -I./src \
   -I./layers \
   -I./models/mnist_models \
@@ -87,7 +87,7 @@ MNIST_QCNN_CFLAGS = \
 
 MNIST_QCNN_LDFLAGS = \
   -static -nostdlib -nostartfiles -lm -lgcc \
-  -T ./../../tests/saturn_tests/common/test.ld
+  -T ./../../generators/saturn/benchmarks/common/test.ld
 
 # list all your .c/.S files automatically
 MNIST_QCNN_SRC_DIRS := \
@@ -101,8 +101,8 @@ MNIST_QCNN_SRC_DIRS := \
   src/matmul \
   src/conv2d \
   src/transpose \
-  ../../tests/saturn_tests/common \
-  ../../tests/saturn_tests/common/ara
+  ../../generators/saturn/benchmarks/common \
+  ../../generators/saturn/benchmarks/common/ara
 
 MNIST_QCNN_SRCS := $(foreach d,$(MNIST_QCNN_SRC_DIRS),$(wildcard $(d)/*.c $(d)/*.S $(d)/*.h))
 
@@ -111,8 +111,8 @@ MNIST_QCNN_OUT = mnist_cnn_quant.riscv
 
 
 MNIST_Q_CFLAGS = \
-  -I./../../tests/saturn_tests/env \
-  -I./../../tests/saturn_tests/common \
+  -I./../../generators/saturn/benchmarks/env \
+  -I./../../generators/saturn/benchmarks/common \
   -I./src \
   -I./layers \
   -I./models/mnist_models \
@@ -124,7 +124,7 @@ MNIST_Q_CFLAGS = \
 
 MNIST_Q_LDFLAGS = \
   -static -nostdlib -nostartfiles -lm -lgcc \
-  -T ./../../tests/saturn_tests/common/test.ld
+  -T ./../../generators/saturn/benchmarks/common/test.ld
 
 # list all your .c/.S files automatically
 MNIST_Q_SRC_DIRS := \
@@ -138,8 +138,8 @@ MNIST_Q_SRC_DIRS := \
   src/matmul \
   src/conv2d \
   src/transpose \
-  ../../tests/saturn_tests/common \
-  ../../tests/saturn_tests/common/ara
+  ../../generators/saturn/benchmarks/common \
+  ../../generators/saturn/benchmarks/common/ara
 
 MNIST_Q_SRCS := $(foreach d,$(MNIST_Q_SRC_DIRS),$(wildcard $(d)/*.c $(d)/*.S $(d)/*.h))
 
@@ -147,8 +147,8 @@ MNIST_Q_OUT = mnist_quant.riscv
 
 
 MNIST_Q2_CFLAGS = \
-  -I./../../tests/saturn_tests/env \
-  -I./../../tests/saturn_tests/common \
+  -I./../../generators/saturn/benchmarks/env \
+  -I./../../generators/saturn/benchmarks/common \
   -I./src \
   -I./layers \
   -I./models/mnist_models \
@@ -160,7 +160,7 @@ MNIST_Q2_CFLAGS = \
 
 MNIST_Q2_LDFLAGS = \
   -static -nostdlib -nostartfiles -lm -lgcc \
-  -T ./../../tests/saturn_tests/common/test.ld
+  -T ./../../generators/saturn/benchmarks/common/test.ld
 
 # list all your .c/.S files automatically
 MNIST_Q2_SRC_DIRS := \
@@ -174,8 +174,8 @@ MNIST_Q2_SRC_DIRS := \
   src/matmul \
   src/conv2d \
   src/transpose \
-  ../../tests/saturn_tests/common \
-  ../../tests/saturn_tests/common/ara
+  ../../generators/saturn/benchmarks/common \
+  ../../generators/saturn/benchmarks/common/ara
 
 MNIST_Q2_SRCS := $(foreach d,$(MNIST_Q2_SRC_DIRS),$(wildcard $(d)/*.c $(d)/*.S $(d)/*.h))
 
@@ -183,7 +183,7 @@ MNIST_Q2_OUT = mnist_quant2.riscv
 
 
 MNIST_Q2_MC_CFLAGS = \
-  -I./../../tests/saturn_tests/env \
+  -I./../../generators/saturn/benchmarks/env \
   -I./src/common_multicore \
   -I./src \
   -I./layers \
@@ -211,7 +211,7 @@ MNIST_Q2_MC_SRC_DIRS := \
   src/conv2d \
   src/transpose \
   src/common_multicore \
-  ../../tests/saturn_tests/common/ara
+  ../../generators/saturn/benchmarks/common/ara
 
 MNIST_Q2_MC_SRCS := $(foreach d,$(MNIST_Q2_MC_SRC_DIRS),$(wildcard $(d)/*.c $(d)/*.S $(d)/*.h))
 
@@ -220,7 +220,7 @@ MNIST_Q2_MC_OUT = mnist_quant2_mc.riscv
 
 
 MNIST_CNN_MC_CFLAGS = \
-  -I./../../tests/saturn_tests/env \
+  -I./../../generators/saturn/benchmarks/env \
   -I./src/common_multicore \
   -I./src \
   -I./layers \
@@ -248,7 +248,7 @@ MNIST_CNN_MC_SRC_DIRS := \
   src/conv2d \
   src/transpose \
   src/common_multicore \
-  ../../tests/saturn_tests/common/ara
+  ../../generators/saturn/benchmarks/common/ara
 
 MNIST_CNN_MC_SRCS := $(foreach d,$(MNIST_CNN_MC_SRC_DIRS),$(wildcard $(d)/*.c $(d)/*.S $(d)/*.h))
 
