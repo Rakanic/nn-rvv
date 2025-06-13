@@ -61,7 +61,7 @@ int main(void)
 {
     // printf("probs: %p", probs );
     int i = 0;
-    while (i < 1) {
+    while (i < 18) {
         /* cycle counter ------------------------------------------------ */
         unsigned long cyc0, cyc1, ins0, ins1;
         asm volatile("rdcycle %0"   : "=r"(cyc0));

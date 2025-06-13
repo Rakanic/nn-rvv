@@ -107,7 +107,7 @@ void vec_conv_c_code(
             vrow0 = __riscv_vwmacc_vx_i32m4(vrow0, k7, vload1, vl); ap_1 += a_stride;
             vrow0 = __riscv_vwmacc_vx_i32m4(vrow0, k8, vload2, vl); ap_2 += a_stride;
 
-            print_vint32_m4(vrow0, vl);
+            // print_vint32_m4(vrow0, vl);
             
             vfacc = __riscv_vfcvt_f_x_v_f32m4(vrow0, vl);
             vfacc = __riscv_vfmul_vf_f32m4(vfacc, scale, vl);
@@ -137,7 +137,7 @@ void vec_conv_c_code(
             vrow0 = __riscv_vwmacc_vx_i32m4(vrow0, k4, vload1, vl);
             vrow0 = __riscv_vwmacc_vx_i32m4(vrow0, k5, vload2, vl);
 
-            print_vint32_m4(vrow1, vl);
+            // print_vint32_m4(vrow1, vl);
             
             vfacc = __riscv_vfcvt_f_x_v_f32m4(vrow1, vl);
             vfacc = __riscv_vfmul_vf_f32m4(vfacc, scale, vl);
@@ -162,7 +162,7 @@ void vec_conv_c_code(
         vrow0 = __riscv_vwmacc_vx_i32m4(vrow0, k7, vload1, vl);
         vrow0 = __riscv_vwmacc_vx_i32m4(vrow0, k8, vload2, vl);
 
-        print_vint32_m4(vrow0, vl);
+        // print_vint32_m4(vrow0, vl);
         
         vfacc = __riscv_vfcvt_f_x_v_f32m4(vrow0, vl);
         vfacc = __riscv_vfmul_vf_f32m4(vfacc, scale, vl);
@@ -185,7 +185,7 @@ void vec_conv_c_code(
             vload2 = __riscv_vwcvt_x_x_v_i16m2(__riscv_vle8_v_i8m1(ap_2, vl), vl);
             vrow1 = __riscv_vwmacc_vx_i32m4(vrow1, k8, vload2, vl);
 
-            print_vint32_m4(vrow1, vl);
+            // print_vint32_m4(vrow1, vl);
             
             vfacc = __riscv_vfcvt_f_x_v_f32m4(vrow1, vl);
             vfacc = __riscv_vfmul_vf_f32m4(vfacc, scale, vl);
@@ -244,7 +244,7 @@ void requantize_2D1(
 }
 
 // TODO: CALL CONV2D accelerator PROPPERLY
-void dwconv_3x3_int8_VCO(
+void dwconv_3x3_int8_VCO1(
     size_t rows, size_t cols,
     size_t channels,
     size_t a_stride, size_t b_stride,
@@ -350,7 +350,7 @@ void dwconv_3x3_int8_VCO(
     }
 }
 
-void dwconv_3x3_int8_VCO1(
+void dwconv_3x3_int8_VCO(
     size_t rows, size_t cols,
     size_t channels,
     size_t a_stride, size_t b_stride,
@@ -374,13 +374,13 @@ void dwconv_3x3_int8_VCO1(
         int8_t *a_ch = input + ch * a_channel_size;
         int8_t *b_ch = output + ch * b_channel_size;
 
-        printf("weights: \n");
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                printf("%d, ", k_ch[i*3 + j]);
-            }
-            printf("\n");
-        }
+        // printf("weights: \n");
+        // for (int i = 0; i < 3; i++) {
+        //     for (int j = 0; j < 3; j++) {
+        //         printf("%d, ", k_ch[i*3 + j]);
+        //     }
+        //     printf("\n");
+        // }
 
         // printf("scale values: %d \n", (int) (1/requant_params.scale[ch]));
 
