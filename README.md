@@ -1,7 +1,7 @@
 # nn-rvv
 
 **nn-rvv** is a lightweight deep‑learning library for converting high‑level PyTorch or TFLite models into highly optimized C code targeting RISC‑V Vector Extension (RVV) 1.0.  
-Built and tested within the [Chipyard](https://chipyard.org) framework, nn-rvv currently targets the [Saturn Vector Unit](https://github.com/ucb-bar/saturn-vectors).
+Built and tested within the [Chipyard](https://github.com/ucb-bar/chipyard) framework, nn-rvv currently targets the [Saturn Vector Unit](https://github.com/ucb-bar/saturn-vectors).
 
 > **⚠️ Work in Progress:** There is still a lot of work to be done—new layers, full quantization paths, and robust multithreading support are all on the roadmap!
 
