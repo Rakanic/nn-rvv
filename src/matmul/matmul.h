@@ -89,4 +89,19 @@ void int8_qgemm_int32bias(
     size_t c_col_stride,
     requantization_params_t requant_params);
 
+void int8_qgemm_int32bias_conv1x1(
+    size_t M, size_t N, size_t K,
+    const void* A, size_t a_row_stride,
+    const int8_t* B,
+    int8_t* C, size_t c_row_stride,
+    size_t c_col_stride,
+    requantization_params_t requant_params);
+
+void int8_qgemm_int32bias_conv1x1_relu(
+    size_t M, size_t N, size_t K,
+    const void* A, size_t a_row_stride,
+    const int8_t* B,
+    int8_t* C, size_t c_row_stride,
+    size_t c_col_stride,
+    requantization_params_t requant_params);
 #endif
