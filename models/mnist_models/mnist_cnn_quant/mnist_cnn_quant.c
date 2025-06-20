@@ -87,7 +87,7 @@ int main(void)
         // }
 
         /* --------------------------------------------------------------
-           1) Conv-0 : 1×28×28 → 16×26×26   (DW+PW)
+           1) Conv-0 : 1×28×28 → 16×26×26   (DW)
            -------------------------------------------------------------- */
         conv2D_3x3_int8(
             /* H,W          */ 28, 28,
@@ -100,6 +100,20 @@ int main(void)
             /* rq params    */ rq_conv0_dw
         );
 
+        /* optional: print conv0_out */
+        // printf("output conv 0\n");
+        // for (size_t ch = 0; ch < 1; ch++) {
+        //     printf("Channel %d:\n", ch);
+        //     for (size_t r = 0; r < 26; r++) {
+        //         for (size_t c = 0; c < 26; c++) {
+        //             size_t idx = ch*26*26 + r*26 + c;
+        //             printf("%d ", conv0_out[idx]);
+        //         }
+        //         printf("\n");
+        //     }
+        //     printf("\n");
+        // }
+
         conv_1x1_int8(
             26, 26, 
             1, 16, 
@@ -109,6 +123,19 @@ int main(void)
             1, 
             rq_conv0_pw
         );
+        /* optional: print pw0_out */
+        // printf("output pointwise 0\n");
+        // for (size_t ch = 0; ch < 16; ch++) {
+        //     printf("Channel %d:\n", ch);
+        //     for (size_t r = 0; r < 26; r++) {
+        //         for (size_t c = 0; c < 26; c++) {
+        //             size_t idx = ch*26*26 + r*26 + c;
+        //             printf("%d ", pw0_out[idx]);
+        //         }
+        //         printf("\n");
+        //     }
+        //     printf("\n");
+        // }
 
         /* --------------------------------------------------------------
            2) MaxPool-0 : 3×3,str=3  –> 16×8×8
