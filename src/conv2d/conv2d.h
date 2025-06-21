@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include "quantization_params.h"
 
-void *vec_conv (size_t, size_t, size_t, size_t, const float*, const float*, float*);
-void *vec_conv_relu (size_t, size_t, size_t, size_t, const float*, const float*, float*);
+void *vec_conv (size_t, size_t, size_t, size_t, const float*, const float*, float*, float);
+void *vec_conv_relu (size_t, size_t, size_t, size_t, const float*, const float*, float*, float);
 void *vec_conv_3x3_int8(size_t, size_t, size_t, size_t, const int8_t*, const int8_t*, int8_t*, int32_t, float, float);
 void *vec_conv_3x3_int8_relu(size_t, size_t, size_t, size_t, const int8_t*, const int8_t*, int8_t*, int16_t, float, float);
 
@@ -118,5 +118,22 @@ void conv_1x1_relu_f32_2d(
     float bias,
     float* output
 );
+
+void dwconv_5x5_f32_VCO(
+    size_t rows, size_t cols,
+    size_t channels,
+    size_t a_stride, size_t b_stride,
+    const float *weights,      // weights: first 'channels' bias values, then 9 weights per channel
+    const float *input, 
+    float *output
+);
+// void dwconv_5x5_f32_VCO_relu(
+//     size_t rows, size_t cols,
+//     size_t channels,
+//     size_t a_stride, size_t b_stride,
+//     const float *weights,      // weights: first 'channels' bias values, then 9 weights per channel
+//     const float *input, 
+//     float *output
+// );
 
 #endif

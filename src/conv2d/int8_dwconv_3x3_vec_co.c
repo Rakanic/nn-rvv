@@ -216,7 +216,7 @@ void dwconv_3x3_int8_VCO(
 ) {
     // Each channel's input is assumed to be a padded matrix with (rows+2) rows.
     size_t a_channel_size = (rows + 2) * a_stride;
-    // Each channel's output is rows x b_stride (typically b_stride equals cols)
+    // Each channel's output is rows x b_stride (b_stride equals cols)
     size_t b_channel_size = rows * b_stride;
     const int8_t* w = (const int8_t*) ((const int32_t*) weights + channels);
 

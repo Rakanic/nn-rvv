@@ -462,15 +462,14 @@ void dwconv_5x5_f32_VCO(
     const float *input, 
     float *output
 ) {
-    // Each channel's input is assumed to be a padded matrix with (rows+2) rows.
     size_t a_channel_size = (rows + 4) * a_stride;
-    // Each channel's output is rows x b_stride (typically b_stride equals cols)
+    // Each channel's output is rows x b_stride (b_stride is the columns)
     size_t b_channel_size = rows * b_stride;
 
     for (size_t ch = 0; ch < channels; ch++) {
         // The bias for this channel is stored at weights[ch].
         // float bias = weights[ch];
-        // The 3x3 kernel for this channel is stored starting at weights[channels] with 9 floats per channel.
+        // The 5x5 kernel for this channel is stored starting at weights[channels] with 25 floats per channel.
         const float *k_ch = weights + channels + ch * 25;
 
         const float *a_ch = input + ch * a_channel_size;

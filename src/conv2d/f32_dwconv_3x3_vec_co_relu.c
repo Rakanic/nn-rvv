@@ -27,7 +27,7 @@ void dwconv_3x3_f32_VCO_relu(
         float *b_ch = output + ch * b_channel_size;
 
         // Compute the convolution for this channel.
-        vec_conv_relu(rows, cols, a_stride, b_stride, k_ch, a_ch, b_ch);
+        vec_conv_relu(rows, cols, a_stride, b_stride, k_ch, a_ch, b_ch, weights[ch]);
     }
 }
 

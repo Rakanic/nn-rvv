@@ -17,6 +17,7 @@
  *     a4: const float *k
  *     a5: const float *a
  *	   a6: float *b
+ *     fa0: float bias
  */
 
 #define rows		a0
@@ -26,6 +27,7 @@
 #define k			a4
 #define a			a5
 #define b			a6
+#define bias        fa0
 
 #define ap			t0
 #define bp			t1
@@ -97,7 +99,8 @@ loop_prolog:
 
     # Load the first row and compute horizontal
     vle32.v vload0, (ap)
-    vfmul.vf vrow0, vload0, k0
+    vfmv.v.f vrow0, bias
+    vfmacc.vf vrow0, k0, vload0
     vle32.v vload1, (ap_4)
     vfmacc.vf vrow0, k1, vload1
     vle32.v vload2, (ap_8)
@@ -117,7 +120,8 @@ loop_prolog:
     add ap, ap, a_stride
 
     # Load the third row
-    vfmul.vf vrow1, vload0, k0
+    vfmv.v.f vrow1, bias
+    vfmacc.vf vrow1, k0, vload0
     vle32.v vload0, (ap)
     addi ap_4, ap, 4
     vfmacc.vf vrow1, k1, vload1
@@ -142,7 +146,8 @@ conv_loop:
     vfmacc.vf vrow1, k4, vload1
     vfmacc.vf vrow1, k5, vload2
 
-    vfmul.vf vrow0, vload0, k0
+    vfmv.v.f vrow0, bias
+    vfmacc.vf vrow0, k0, vload0
     vle32.v vload0, (ap)
     vfmacc.vf vrow0, k1, vload1
     vle32.v vload1, (ap_4)
@@ -165,7 +170,8 @@ conv_loop:
     vfmax.vf vrow1, vrow1, zero
     vse32.v vrow1, (bp) 
 
-    vfmul.vf vrow1, vload0, k0
+    vfmv.v.f vrow1, bias
+    vfmacc.vf vrow1, k0, vload0
     vle32.v vload0, (ap)
     vfmacc.vf vrow1, k1, vload1
     vle32.v vload1, (ap_4)
