@@ -29,10 +29,12 @@
  void __main(void) 
  {
     const uint32_t me = read_csr(mhartid);
-    static float conv0_out2 [16 * 26 * 26];
+    static float conv0_out2 [1 * 26 * 26];
+    static float pw0_out2   [16 * 26 * 26]; // pointwise conv output
     static float pool0_out2 [16 *  8 *  8];
        
-    static float conv1_out2 [32 *  6 *  6];
+    static float conv1_out2 [16 *  6 *  6];
+    static float pw1_out2   [32 *  6 *  6]; // pointwise conv output
     static float pool1_out2 [32 *  2 *  2];   // = 128 floats
        
     static float dense0_out2[BATCHES * 32];
@@ -43,16 +45,25 @@
     while (1) {
         while (!go) ;
 
-        conv2D_3x3_f32(
+        dw_conv2D_3x3_f32(
             28, 28,                       /* H,W              */
-            1,  16,                       /* Cin,Cout         */
+            1,                            /* Cin,Cout         */
             1,                            /* stride           */
             0,                            /* padding VALID    */
-            dw0, pw0,                     /* weights          */
+            dw0,                          /* weights          */
             input + j*784,                /* input  CHW       */
             conv0_out2,                    /* output CHW       */
-            /* relu_dw = */ 0,
-            /* relu_pw = */ 1             /* ReLU after PW    */
+            /* relu_dw = */ 0
+        );
+
+        conv2D_1x1_f32(
+            26, 26,                       /* H,W              */
+            1, 16,                        /* Cin,Cout         */
+            1, 0,                         /* stride, padding  */
+            pw0,                          /* weights          */
+            conv0_out2,                   /* input  CHW       */
+            pw0_out2,                     /* output CHW       */
+            /* relu = */ 1                /* ReLU after PW    */
         );
     
         /* ---------------- MaxPool‑0 : 3×3,str=3 --------------------------- */
@@ -61,20 +72,30 @@
             26, 26,                       /* input  rows,cols  */
             16,                           /* channels          */
             3,                            /* stride            */
-            conv0_out2, pool0_out2
+            pw0_out2, pool0_out2
         );
     
         /* ---------------- Conv‑1 : 16×8×8 → 32×6×6 ------------------------ */
-        conv2D_3x3_f32(
+        dw_conv2D_3x3_f32(
             8, 8,                         /* H,W               */
-            16, 32,                       /* Cin,Cout          */
+            16,                           /* Cin,Cout          */
             1,                            /* stride            */
             0,                            /* padding VALID     */
-            dw1, pw1,                     /* weights           */
-            pool0_out2,                    /* input             */
-            conv1_out2,                    /* output            */
-            0, 1                          /* ReLU only after PW*/
+            dw1,                          /* weights           */
+            pool0_out2,                   /* input             */
+            conv1_out2,                   /* output            */
+            0                             /* ReLU only after PW*/
         );
+
+        conv2D_1x1_f32(
+            6, 6,                         /* H,W              */
+            16, 32,                       /* Cin,Cout         */
+            1, 0,                         /* stride, padding  */
+            pw1,                          /* weights          */
+            conv1_out2,                    /* input  CHW       */
+            pw1_out2,                      /* output CHW       */
+            /* relu = */ 1                /* ReLU after PW    */
+     );
     
         /* ---------------- MaxPool‑1 : 3×3,str=3 → 32×2×2 ----------------- */
         maxpool_f32(
@@ -82,7 +103,7 @@
             6, 6,                         /* in  rows,cols     */
             32,                           /* channels          */
             3,                            /* stride            */
-            conv1_out2, pool1_out2
+            pw1_out2, pool1_out2
         );
     
         /* ---------------- FC‑0 : 128 → 32  + ReLU ------------------------- */
@@ -133,10 +154,12 @@
  int main(void)
  {
 
-     static float conv0_out [16 * 26 * 26];
+     static float conv0_out [1 * 26 * 26];
+    static float pw0_out   [16 * 26 * 26]; // pointwise conv output
      static float pool0_out [16 *  8 *  8];
         
-     static float conv1_out [32 *  6 *  6];
+     static float conv1_out [16 *  6 *  6];
+     static float pw1_out   [32 *  6 *  6]; // pointwise conv output
      static float pool1_out [32 *  2 *  2];   // = 128 floats
         
      static float dense0_out[BATCHES * 32];
@@ -157,17 +180,26 @@
      
  
      /* ---------------- Conv‑0 : 1×28×28 → 16×26×26 -------------------- */
-     conv2D_3x3_f32(
+     dw_conv2D_3x3_f32(
          28, 28,                       /* H,W              */
-         1,  16,                       /* Cin,Cout         */
+         1,                            /* Cin,Cout         */
          1,                            /* stride           */
          0,                            /* padding VALID    */
-         dw0, pw0,                     /* weights          */
+         dw0,                          /* weights          */
          input + i*784,                /* input  CHW       */
          conv0_out,                    /* output CHW       */
-         /* relu_dw = */ 0,
-         /* relu_pw = */ 1             /* ReLU after PW    */
+         /* relu_dw = */ 0
      );
+
+     conv2D_1x1_f32(
+         26, 26,                       /* H,W              */
+         1, 16,                        /* Cin,Cout         */
+         1, 0,                         /* stride, padding  */
+         pw0,                          /* weights          */
+         conv0_out,                    /* input  CHW       */
+         pw0_out,                      /* output CHW       */
+         /* relu = */ 1                /* ReLU after PW    */
+     ); 
  
      /* ---------------- MaxPool‑0 : 3×3,str=3 --------------------------- */
      maxpool_f32(
@@ -175,20 +207,31 @@
          26, 26,                       /* input  rows,cols  */
          16,                           /* channels          */
          3,                            /* stride            */
-         conv0_out, pool0_out
+         pw0_out, pool0_out
      );
  
      /* ---------------- Conv‑1 : 16×8×8 → 32×6×6 ------------------------ */
-     conv2D_3x3_f32(
+     dw_conv2D_3x3_f32(
          8, 8,                         /* H,W               */
-         16, 32,                       /* Cin,Cout          */
+         16,                           /* Cin,Cout          */
          1,                            /* stride            */
          0,                            /* padding VALID     */
-         dw1, pw1,                     /* weights           */
+         dw1,                          /* weights           */
          pool0_out,                    /* input             */
          conv1_out,                    /* output            */
-         0, 1                          /* ReLU only after PW*/
+         0                             /* ReLU only after PW*/
      );
+
+     conv2D_1x1_f32(
+         6, 6,                         /* H,W              */
+         16, 32,                       /* Cin,Cout         */
+         1, 0,                         /* stride, padding  */
+         pw1,                          /* weights          */
+         conv1_out,                    /* input  CHW       */
+         pw1_out,                      /* output CHW       */
+         /* relu = */ 1                /* ReLU after PW    */
+     );
+
  
      /* ---------------- MaxPool‑1 : 3×3,str=3 → 32×2×2 ----------------- */
      maxpool_f32(
@@ -196,7 +239,7 @@
          6, 6,                         /* in  rows,cols     */
          32,                           /* channels          */
          3,                            /* stride            */
-         conv1_out, pool1_out
+         pw1_out, pool1_out
      );
  
      /* ---------------- FC‑0 : 128 → 32  + ReLU ------------------------- */

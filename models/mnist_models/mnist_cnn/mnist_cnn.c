@@ -22,10 +22,12 @@
  ----------------------------------------------------------------- */
  
  /* --- buffers --------------------------------------------------- */
- static float conv0_out [16 * 26 * 26];
+ static float conv0_out [1 * 26 * 26];
+ static float pw0_out   [16 * 26 * 26]; // pointwise conv output
  static float pool0_out [16 *  8 *  8];
  
- static float conv1_out [32 *  6 *  6];
+ static float conv1_out [16 *  6 *  6];
+ static float pw1_out   [32 *  6 *  6]; // pointwise conv output
  static float pool1_out [32 *  2 *  2];   // = 128 floats
  
  static float dense0_out[BATCHES * 32];
@@ -55,16 +57,25 @@
      
  
      /* ---------------- Conv‑0 : 1×28×28 → 16×26×26 -------------------- */
-     conv2D_3x3_f32(
+     dw_conv2D_3x3_f32(
          28, 28,                       /* H,W              */
-         1,  16,                       /* Cin,Cout         */
+         1,                            /* Cin              */
          1,                            /* stride           */
          0,                            /* padding VALID    */
-         dw0, pw0,                     /* weights          */
+         dw0,                          /* weights          */
          input + i*784,                /* input  CHW       */
          conv0_out,                    /* output CHW       */
-         /* relu_dw = */ 0,
-         /* relu_pw = */ 1             /* ReLU after PW    */
+         /* relu_dw = */ 0             /* ReLU after       */
+     );
+
+     conv2D_1x1_f32(
+         26, 26,                       /* H,W              */
+         1, 16,                        /* Cin,Cout         */
+         1, 0,                         /* stride, padding  */
+         pw0,                          /* weights          */
+         conv0_out,                    /* input  CHW       */
+         pw0_out,                      /* output CHW       */
+         /* relu = */ 1                /* ReLU after PW    */
      );
  
      /* ---------------- MaxPool‑0 : 3×3,str=3 --------------------------- */
@@ -73,19 +84,29 @@
          26, 26,                       /* input  rows,cols  */
          16,                           /* channels          */
          3,                            /* stride            */
-         conv0_out, pool0_out
+         pw0_out, pool0_out
      );
  
      /* ---------------- Conv‑1 : 16×8×8 → 32×6×6 ------------------------ */
-     conv2D_3x3_f32(
-         8, 8,                         /* H,W               */
-         16, 32,                       /* Cin,Cout          */
+     dw_conv2D_3x3_f32(
+         8, 8,                         /* H,W               */ 
+         16,                           /* Cin               */
          1,                            /* stride            */
          0,                            /* padding VALID     */
-         dw1, pw1,                     /* weights           */
+         dw1,                          /* weights           */
          pool0_out,                    /* input             */
          conv1_out,                    /* output            */
-         0, 1                          /* ReLU only after PW*/
+         0                             /* ReLU only after PW*/
+     );
+
+     conv2D_1x1_f32(
+         6, 6,                         /* H,W              */
+         16, 32,                       /* Cin,Cout         */
+         1, 0,                         /* stride, padding  */
+         pw1,                          /* weights          */
+         conv1_out,                    /* input  CHW       */
+         pw1_out,                      /* output CHW       */
+         /* relu = */ 1                /* ReLU after PW    */
      );
  
      /* ---------------- MaxPool‑1 : 3×3,str=3 → 32×2×2 ----------------- */
@@ -94,7 +115,7 @@
          6, 6,                         /* in  rows,cols     */
          32,                           /* channels          */
          3,                            /* stride            */
-         conv1_out, pool1_out
+         pw1_out, pool1_out
      );
 
     //  printf("output maxpool 0\n");

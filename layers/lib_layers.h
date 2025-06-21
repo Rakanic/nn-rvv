@@ -67,16 +67,25 @@ void softmax_vec(
     size_t innerSize
 );
 
-void conv2D_3x3_f32 (
+void dw_conv2D_3x3_f32 (
+    size_t H, size_t W,
+    size_t Cin,
+    size_t stride,
+    size_t padding, // 0 for valid, 1 for same, 2 for full (NOT SUPPORTED YET)
+    const float *dw_weights,  // length = Cin*(1 + 9)
+    float *input,       // CHW: [Cin][H][W]
+    float *output,            // CHW: [Cout][H_out][W_out]
+    int relu_dw
+);
+
+void conv2D_1x1_f32 (
     size_t H, size_t W,
     size_t Cin, size_t Cout,
     size_t stride,
     size_t padding, // 0 for valid, 1 for same, 2 for full (NOT SUPPORTED YET)
-    const float *dw_weights,  // length = Cin*(1 + 9)
     const float *pw_weights,  // length = Cout*Cin
     float *input,       // CHW: [Cin][H][W]
     float *output,            // CHW: [Cout][H_out][W_out]
-    int relu_dw,
     int relu_pw
 );
 
