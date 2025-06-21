@@ -33,7 +33,7 @@ void conv2D_3x3_int8 (
             H_out, W_out, 
             Cin, 
             W, W_out, 
-            (int8_t*) dw_weights, 
+            dw_weights, 
             input, 
             output, 
             requant_params_dwconv

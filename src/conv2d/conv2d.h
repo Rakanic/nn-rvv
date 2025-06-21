@@ -65,7 +65,7 @@ void dwconv_3x3_int8_VCO_relu(
     size_t rows, size_t cols,
     size_t channels,
     size_t a_stride, size_t b_stride,
-    const int8_t *weights,      // weights: first 'channels' bias values, then 9 weights per channel
+    const void *weights,      // weights: first 'channels' bias values, then 9 weights per channel
     int8_t *input, 
     int8_t *output,
     requantization_params_t requant_params
