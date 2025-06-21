@@ -1,6 +1,13 @@
 #include "lib_layers.h"
 #include <stdint.h>
 
+/* 
+    This convolution is a 1x1 convolution, which is equivalent to a pointwise convolution.
+    It transposes the input and the output to perform the operation in a more efficient way. 
+    Depending on the size of the problem, this kernel might be more efficient than the standard 
+    below 1x1 convolution. 
+*/
+
 void conv_1x1_int8_(
     size_t rows, size_t cols, 
     size_t channels_in,
@@ -38,6 +45,8 @@ void conv_1x1_int8(
     size_t rows, size_t cols, 
     size_t channels_in,
     size_t channels_out,
+    size_t stride,
+    size_t padding, // 0 for valid, 1 for same, 2 for full (NOT SUPPORTED YET)
     int8_t* input,
     const void* weights,
     int8_t* output, 

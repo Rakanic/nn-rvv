@@ -116,7 +116,8 @@ int main(void)
 
         conv_1x1_int8(
             26, 26, 
-            1, 16, 
+            1, 16,
+            1, 0, 
             conv0_out, 
             (const void*) pw0_wb_q,
             pw0_out, 
@@ -178,7 +179,8 @@ int main(void)
 
         conv_1x1_int8(
             6, 6, 
-            16, 32, 
+            16, 32,
+            1, 0, 
             conv1_out, 
             (const void*) pw1_wb_q,
             pw1_out,
