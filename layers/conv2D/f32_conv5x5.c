@@ -25,13 +25,13 @@ void dw_conv2D_5x5_f32 (
             output
         );
     } else {
-        // dwconv_5x5_f32_VCO_relu(
-        //     H_out, W_out, 
-        //     Cin, 
-        //     W, W_out, 
-        //     dw_weights, 
-        //     input, 
-        //     output
-        // );
+        dwconv_5x5_f32_VCO_relu(
+            H_out, W_out, 
+            Cin, 
+            W, W_out, 
+            dw_weights, 
+            input, 
+            output
+        );
     }
 }

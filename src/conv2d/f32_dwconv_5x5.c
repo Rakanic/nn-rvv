@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <riscv_vector.h>
+#include "conv2d.h"
 
 
 void vec_conv2_5x5(size_t rows, size_t cols, size_t a_stride, size_t b_stride,
@@ -452,8 +453,6 @@ void vec_conv2_5x5(size_t rows, size_t cols, size_t a_stride, size_t b_stride,
     } while (cols != 0);
 }
 
-void *vec_conv_5x5 (size_t, size_t, size_t, size_t, const float*, const float*, float*);
-
 void dwconv_5x5_f32_VCO(
     size_t rows, size_t cols,
     size_t channels,
@@ -476,6 +475,6 @@ void dwconv_5x5_f32_VCO(
         float *b_ch = output + ch * b_channel_size;
 
         // Compute the convolution for this channel using the assembly version.
-        vec_conv_5x5(rows, cols, a_stride, b_stride, k_ch, a_ch, b_ch);
+        vec_conv_5x5(rows, cols, a_stride, b_stride, k_ch, a_ch, b_ch, weights[ch]);
     }
 }

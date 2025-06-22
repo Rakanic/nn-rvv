@@ -15,6 +15,7 @@
  *     a4: const float *k    (25 floats for the 5x5 kernel)
  *     a5: const float *a    (input image)
  *     a6: float *b          (output image)
+ *     fa0: float bias       (bias for this output channel)
  */
 
 #define rows         a0
@@ -24,6 +25,7 @@
 #define k            a4
 #define a            a5
 #define b            a6
+#define bias         fa0
 
 // We need more pointers for loads at +0,+4,+8,+12,+16
 #define ap           t0
@@ -53,7 +55,7 @@
 #define k8  ft8
 #define k9  ft9
 // We will use f registers from f10..f14, f15..f19, f20..f24, etc. to hold the rest:
-#define k10 fa0
+#define k10 fs0
 #define k11 fa1
 #define k12 fa2
 #define k13 fa3
@@ -63,7 +65,7 @@
 #define k17 fa7
 #define k18 ft10
 #define k19 ft11
-#define k20 fs6
+#define k20 fs1
 #define k21 fs2
 #define k22 fs3
 #define k23 fs4
@@ -82,7 +84,7 @@
 #define vrow3        v28
 
 // Increase frame size to save/restore s2, s3 as well
-#define FRAMESIZE 48   // 32 was for s0,s1; add 16 more bytes for s2,s3
+#define FRAMESIZE 80   // 32 was for s0,s1; add 16 more bytes for s2,s3
 
 //----------------------------------------------------------------------------
 // vec_conv_5x5
@@ -93,6 +95,13 @@ vec_conv_5x5:
     sd      s1, 8(sp)
     sd      s2, 16(sp)
     sd      s3, 24(sp)
+    fsd     fs0, 32(sp)
+    fsd     fs1, 40(sp)
+    fsd     fs2, 48(sp)
+    fsd     fs3, 56(sp)
+    fsd     fs4, 64(sp)
+    fsd     fs5, 72(sp)
+    
 
     ////////////////////////////////////
     // Load the 25 kernel coefficients
@@ -167,7 +176,8 @@ loop_prolog:
     // 1) Load row0 => partial accumulate in vrow0 with k0..k4
     ////////////////////////////////////////////
     vle32.v   vload0, (ap)       // row0[+0]
-    vfmul.vf  vrow0, vload0, k0
+    vfmv.v.f vrow0, bias
+    vfmacc.vf vrow0, k0, vload0
 
     vle32.v   vload1, (ap_4)     // row0[+4]
     vfmacc.vf vrow0, k1, vload1
@@ -212,7 +222,8 @@ loop_prolog:
     ////////////////////////////////////////////
     // 3) Load row2 => accumulate in vrow0 with k10..k14
     ////////////////////////////////////////////
-    vfmul.vf  vrow1, vload0, k0
+    vfmv.v.f vrow1, bias
+    vfmacc.vf vrow1, k0, vload0
     vle32.v   vload0, (ap)
     addi  ap_4,  ap,  4
     vfmacc.vf vrow0, k10, vload0
@@ -243,7 +254,8 @@ loop_prolog:
     ////////////////////////////////////////////
     // 4) Load row3 => accumulate in vrow0 with k15..k19
     ////////////////////////////////////////////
-    vfmul.vf  vrow2, vload0, k0
+    vfmv.v.f vrow2, bias
+    vfmacc.vf vrow2, k0, vload0
     vfmacc.vf vrow1, k5, vload0
     vle32.v   vload0, (ap)
     addi  ap_4,  ap,  4
@@ -278,7 +290,8 @@ loop_prolog:
     ////////////////////////////////////////////
     // 5) Load row4 => begin partial sums in vrow1 with k0..k4
     ////////////////////////////////////////////
-    vfmul.vf vrow3, vload0, k0
+    vfmv.v.f vrow3, bias
+    vfmacc.vf vrow3, k0, vload0
     vfmacc.vf vrow1, k10, vload0
     vfmacc.vf vrow2, k5, vload0
     vle32.v   vload0, (ap)
@@ -354,7 +367,8 @@ conv_loop:
     vfmacc.vf  vrow3, k9, vload4
 
     // load row5 => partial sums for vrow0 with k0..k4
-    vfmul.vf vrow0, vload0, k0
+    vfmv.v.f vrow0, bias
+    vfmacc.vf vrow0, k0, vload0
     vle32.v   vload0, (ap)
     vfmacc.vf vrow0, k1, vload1
     vle32.v vload1, (ap_4)
@@ -401,7 +415,8 @@ conv_loop:
     vse32.v vrow1, (bp)
 
 
-    vfmul.vf vrow1, vload0, k0
+    vfmv.v.f vrow1, bias
+    vfmacc.vf vrow1, k0, vload0
     vle32.v   vload0, (ap)
     vfmacc.vf vrow1, k1, vload1
     vle32.v vload1, (ap_4)
@@ -447,7 +462,8 @@ conv_loop:
     vse32.v vrow2, (bp)
 
 
-    vfmul.vf vrow2, vload0, k0
+    vfmv.v.f vrow2, bias
+    vfmacc.vf vrow2, k0, vload0
     vle32.v   vload0, (ap)
     vfmacc.vf vrow2, k1, vload1
     vle32.v vload1, (ap_4)
@@ -492,7 +508,8 @@ conv_loop:
 
     vse32.v vrow3, (bp)
 
-    vfmul.vf vrow3, vload0, k0
+    vfmv.v.f vrow3, bias
+    vfmacc.vf vrow3, k0, vload0
     vle32.v   vload0, (ap)
     vfmacc.vf vrow3, k1, vload1
     vle32.v vload1, (ap_4)
@@ -639,5 +656,11 @@ exit:
     ld s1,  8(sp)
     ld s2, 16(sp)
     ld s3, 24(sp)
+    fld fs0, 32(sp)
+    fld fs1, 40(sp)
+    fld fs2, 48(sp)
+    fld fs3, 56(sp)
+    fld fs4, 64(sp)
+    fld fs5, 72(sp)
     addi sp, sp, FRAMESIZE
     ret
