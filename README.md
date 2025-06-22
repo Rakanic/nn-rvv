@@ -15,7 +15,7 @@ Built and tested within the [Chipyard](https://github.com/ucb-bar/chipyard) fram
 |--------------------------------------|:-----------:|:-------------:|
 | Fully‑Connected                      | ✅          | ✅            |
 | Depthwise Conv2D (3×3)               | ✅          | ✅            |
-| Depthwise Conv2D (5×5)               | ✅          | 🟨            |
+| Depthwise Conv2D (5×5)               | ✅          | ✅            |
 | Conv 1×1                             | ✅          | ✅            |
 | Max Pool                             | ✅          | ✅            |
 | Softmax                              | ✅          | ❌            |

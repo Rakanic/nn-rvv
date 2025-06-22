@@ -114,6 +114,29 @@ void conv_1x1_int8(
     requantization_params_t rqp
 );
 
+void dw_conv2D_5x5_f32 (
+    size_t H, size_t W,
+    size_t Cin,
+    size_t stride,
+    size_t padding, // 0 for valid, 1 for same, 2 for full (NOT SUPPORTED YET)
+    const float *dw_weights,  // length = Cin*(1 + 9)
+    float *input,       // CHW: [Cin][H][W]
+    float *output,            // CHW: [Cout][H_out][W_out]
+    int relu_dw
+);
+
+void dw_conv2D_5x5_int8 (
+    size_t H, size_t W,
+    size_t Cin,
+    size_t stride,
+    size_t padding, // 0 for valid, 1 for same, 2 for full (NOT SUPPORTED YET)
+    const void *dw_weights,  // length = Cin*(1 + 25)
+    int8_t *input,       // CHW: [Cin][H][W]
+    int8_t *output,            // CHW: [Cout][H_out][W_out]
+    int relu,
+    requantization_params_t requant_params_dwconv
+);
+
 void maxpool_f32(
     size_t output_rows, size_t output_cols, 
     size_t input_rows, size_t input_cols,

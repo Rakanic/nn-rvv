@@ -138,4 +138,24 @@ void dwconv_5x5_f32_VCO_relu(
     float *output
 );
 
+void dwconv_5x5_int8_VCO(
+    size_t rows, size_t cols,
+    size_t channels,
+    size_t a_stride, size_t b_stride,
+    const void *weights,      // weights: first 'channels' bias values, then 9 weights per channel
+    int8_t *input, 
+    int8_t *output, 
+    requantization_params_t requant_params
+);
+
+void dwconv_5x5_int8_VCO_relu(
+    size_t rows, size_t cols,
+    size_t channels,
+    size_t a_stride, size_t b_stride,
+    const void *weights,      // weights: first 'channels' bias values, then 9 weights per channel
+    int8_t *input, 
+    int8_t *output, 
+    requantization_params_t requant_params
+);
+
 #endif
