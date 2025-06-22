@@ -5,6 +5,8 @@ Built and tested within the [Chipyard](https://github.com/ucb-bar/chipyard) fram
 
 > **⚠️ Work in Progress:** There is still a lot of work to be done—new layers, full quantization paths, and robust multithreading support are all on the roadmap!
 
+> **TBD Documentation on each kernel and how to use them.**
+
 ---
 
 ## 🚀 Features
@@ -13,12 +15,13 @@ Built and tested within the [Chipyard](https://github.com/ucb-bar/chipyard) fram
 |--------------------------------------|:-----------:|:-------------:|
 | Fully‑Connected                      | ✅          | ✅            |
 | Depthwise Conv2D (3×3)               | ✅          | ✅            |
+| Depthwise Conv2D (5×5)               | ✅          | 🟨            |
 | Conv 1×1                             | ✅          | ✅            |
 | Max Pool                             | ✅          | ✅            |
 | Softmax                              | ✅          | ❌            |
 | Transpose                            | ✅          | ✅            |
-| Quantize / Dequantize                | ⚙️ Partial  | ⚙️ Partial    |
-| Multithreading                       | ❌ (TBD)    | ❌ (TBD)      |
+| Quantize / Dequantize                |             ✅              |
+| Multithreading                       |             ✅              |
 
 ---
 
