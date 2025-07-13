@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "model_params.h"    /* defines uint8_t dw0_wb[], pw0_wb[], etc. */
-#include "input_data.h"      /* defines float input[] */
+#include "data.h"      /* defines float input[] */
 #include "lib_layers.h"      /* conv2D_3x3_int8, maxpool_int8, quant_fully_connected_int8, ... */
 #define TCM 0
 #define TCM_ADDRESS 0x78000000
@@ -61,7 +61,7 @@ int main(void)
 {
     // printf("probs: %p", probs );
     int i = 0;
-    while (i < 18) {
+    while (i < 20) {
         /* cycle counter ------------------------------------------------ */
         unsigned long cyc0, cyc1, ins0, ins1;
         asm volatile("rdcycle %0"   : "=r"(cyc0));
@@ -177,6 +177,20 @@ int main(void)
             rq_conv1_dw
         );
 
+        // Print output of conv1_out
+        // printf("output conv 1\n");
+        // for (size_t ch = 0; ch < 16; ch++) {
+        //     printf("Channel %zu:\n", ch);
+        //     for (size_t r = 0; r < 6; r++) {
+        //     for (size_t c = 0; c < 6; c++) {
+        //         size_t idx = ch*36 + r*6 + c;
+        //         printf("%d ", conv1_out[idx]);
+        //     }
+        //     printf("\n");
+        //     }
+        //     printf("\n");
+        // }
+
         conv_1x1_int8(
             6, 6, 
             16, 32,
@@ -187,6 +201,20 @@ int main(void)
             1, 
             rq_conv1_pw
         );
+
+        // Print output of pw1_out
+        // printf("output pointwise 1\n");
+        // for (size_t ch = 0; ch < 32; ch++) {
+        //     printf("Channel %zu:\n", ch);
+        //     for (size_t r = 0; r < 6; r++) {
+        //     for (size_t c = 0; c < 6; c++) {
+        //         size_t idx = ch*36 + r*6 + c;
+        //         printf("%d ", pw1_out[idx]);
+        //     }
+        //     printf("\n");
+        //     }
+        //     printf("\n");
+        // }
 
         /* --------------------------------------------------------------
            4) MaxPool-1 : 3×3,str=3  –> 32×2×2
