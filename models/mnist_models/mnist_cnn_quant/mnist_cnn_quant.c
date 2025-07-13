@@ -327,7 +327,7 @@ int main(void)
 
         for (size_t b = 0; b < BATCHES; b++) {
             int pred = argmax10(&probs[b*10]);
-            printf("Sample %d → %d  probs:", b, pred);
+            printf("Sample %d → %d  probs:", i, pred);
             for (int c = 0; c < 10; c++) {
                 printf(" %d", (int)(probs[b*10 + c]*100));
             }
