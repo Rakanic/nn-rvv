@@ -153,4 +153,4 @@ Sample 2 → 1   probs: 0 100 0 0 0 0 0 0 0 0
 
 ## 📫 Contact / Contributions
 
-Early‑stage project — **PRs and discussions welcome!** 🙂
+Early‑stage project — **Suggestions, discussions, and PRs are welcome!** 🙂
