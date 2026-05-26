@@ -48,6 +48,28 @@ void requant_outch_int32(
 /*                                             */
 /*---------------------------------------------*/
 void transpose_int8 (int8_t* input, int8_t* output, size_t rows, size_t cols);
+void transpose_f32  (const float *input, float *output, size_t rows, size_t cols);
+
+/*---------------------------------------------*/
+/*                                             */
+/* Normalization                               */
+/*                                             */
+/*---------------------------------------------*/
+/* RMS norm: out[i] = weight[i] * in[i] / sqrt(mean(in^2) + eps). */
+void rmsnorm_f32(float *out, const float *in, const float *weight, size_t size);
+
+/*---------------------------------------------*/
+/*                                             */
+/* Positional encoding                         */
+/*                                             */
+/*---------------------------------------------*/
+/* RoPE: rotate q[n_heads * head_size] and k[n_kv_heads * head_size] in place
+ * by the per-pair angle for token position `pos` (llama2 convention). */
+void rope_f32(
+    float *q, float *k,
+    size_t n_heads, size_t n_kv_heads, size_t head_size,
+    size_t pos
+);
 
 /*---------------------------------------------*/
 /*                                             */
