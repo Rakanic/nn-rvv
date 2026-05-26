@@ -1,9 +1,10 @@
 # nn-rvv
 
-**nn-rvv** is a lightweight deep‑learning framework for compiling high‑level neural networks into efficient, bare‑metal C code targeting the **RISC‑V Vector Extension (RVV) 1.0**. Built for and tested within the Chipyard environment, it currently targets the **Saturn Vector Unit**.
+**nn-rvv** is a lightweight deep‑learning framework for compiling high‑level neural networks into efficient, bare‑metal C code targeting the **RISC‑V Vector Extension (RVV) 1.0**. Built for and tested within the Chipyard environment, it currently targets the **Saturn Vector Unit**.
 
-✅ **Quantization Support** – Full symmetric *and* asymmetric flows, including zero‑points, bias quantization and per‑layer clamping  
-⚠️ **Roadmap Focus** – Ongoing work on a smoother Python → C compilation path and deeper RVV kernel optimizations (3 × 3 depthwise first, then 5 × 5 and 1 × 1 pointwise)
+✅ **Quantization Support** – Full symmetric *and* asymmetric flows, including zero‑points, bias quantization and per‑layer clamping
+✅ **Transformer-friendly path** – `int8_qgemm_fout` + `quant_fully_connected_int8_t` for transposed-weight int8 transformer inference
+⚠️ **Roadmap Focus** – Ongoing work on a smoother Python → C compilation path and deeper RVV kernel optimizations (3×3 depthwise first, then 5×5 and 1×1 pointwise)
 
 ---
 
@@ -11,146 +12,66 @@
 
 | Layer / Op                       | f32 | int8 |
 |----------------------------------|:---:|:----:|
-| Fully Connected                  | ✅  | ✅   |
-| Depthwise Conv2D (3 × 3)          | ✅  | ✅   |
-| Depthwise Conv2D (5 × 5)          | ✅  | ✅   |
-| Pointwise Conv (1 × 1)            | ✅  | ✅   |
-| Max Pool                         | ✅  | ✅   |
+| Fully Connected                  | ✅  | ✅   |
+| Fully Connected (transposed weights) | —   | ✅   |
+| Depthwise Conv2D (3×3)           | ✅  | ✅   |
+| Depthwise Conv2D (5×5)           | ✅  | ✅   |
+| Pointwise Conv (1×1)             | ✅  | ✅   |
+| Max Pool (3×3, str 1/2/3)        | ✅  | ✅   |
 | Softmax                          | ✅  | ❌   |
-| Transpose                        | ✅  | ✅   |
-| Quantize / Dequantize            | —   | ✅   |
-| Multithreading (basic)           | ✅  | ✅   |
+| Transpose                        | —   | ✅   |
+| ReLU6                            | —   | ✅   |
+| Residual Add                     | —   | ✅   |
+| Quantize / Dequantize / Requantize | —   | ✅   |
+| Padding (channel-wise)           | —   | ✅   |
 
 ---
 
-## 🔧 Getting Started
+## 📁 Layout
 
-1. **Prerequisites**  
-   • A RISC‑V toolchain with **RVV 1.0** support  
-   • A Chipyard installation with the appropriate conda environment sourced (Spike, `riscv64-unknown-elf-gcc`, …)
-
----
-
-## 🧠 Example Network
-
-```python
-class DWPWNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.dw0   = nn.Conv2d(1, 1, 3, groups=1, bias=False)
-        self.pw0   = nn.Conv2d(1, 16, 1, bias=True)
-        self.pool0 = nn.MaxPool2d(3, 3)
-        self.dw1   = nn.Conv2d(16, 16, 3, groups=16, bias=False)
-        self.pw1   = nn.Conv2d(16, 32, 1, bias=True)
-        self.pool1 = nn.MaxPool2d(3, 3)
-        self.fc0   = nn.Linear(32*2*2, 32)
-        self.fc1   = nn.Linear(32, 10)
 ```
-
-You’ll find the full file at `models/mnist_models/mnist_cnn/mnist_cnn.py`.
-
----
-
-## 🧪 Training + Compilation Workflow
-
-**Step 1 – Train (float32)**  
-```bash
-cd models/mnist_models/mnist_cnn
-python mnist_cnn.py      # dumps model_params.h with learned weights
-```
-
-**Step 2 – Compile & Run (float32 inference)**  
-```bash
-make mnist_cnn
-spike --isa=rv64gcv_zicntr mnist_cnn.riscv
-```
-
-These examples are using spike, but you can also run the binary in RTL simulation in Chipyard using a Saturn configuration. 
-
-
----
-
-## 🧮 Quantized Workflow
-
-Quantized inference is fully supported and stable. This example uses a standard symmetric flow and I didn't include bias in the layers, but asymmetric with zero‑points and int32 biases is also available.
-
-```python
-# Example forward snippet
-x = torch.clamp(x * self.input_scale, min=-128, max=127).round()
-x = self.dw0(x)
-x = torch.clamp(x * self.dw0.output_scale, min=-128, max=127).round()
-# ...
-x = self.fc1(x)
-x = torch.clamp(x * self.fc1.output_scale, min=-128, max=127).round()
-```
-
-**Step 1 – Quantize & Export**  
-Run `export_quantized_to_header.py` to generate `model_params.h` (weights + scales).
-
-**Step 2 – Compile & Run (int8 inference)**  
-```bash
-make mnist_cnn_quant
-spike --isa=rv64gcv_zicntr mnist_cnn_quant.riscv
+nn-rvv/
+├── CMakeLists.txt          # Builds static library `nnrvv`
+├── include/
+│   └── nn_rvv/
+│       └── layers.h        # Public API
+├── src/
+│   ├── layers/             # High-level layer dispatchers
+│   └── ops/                # Kernel implementations
+│       ├── matmul/         # f32/int8/quant GEMM kernels (vec-nn authoritative)
+│       ├── conv2D/         # Depthwise + standard conv kernels (C and asm)
+│       ├── pooling/        # Max-pool ukernels
+│       ├── padding/        # Channel-wise input padding
+│       └── ara/            # Exp implementation used by softmax
+└── models/                 # Reference MNIST models (training scripts + sample C entry points)
 ```
 
 ---
 
-## 🧵 Multicore Support
+## 🔧 Using nn-rvv
 
-Basic multicore inference targets are provided:
+### As a CMake subdirectory
+
+```cmake
+add_subdirectory(nn-rvv)
+target_link_libraries(my_target PRIVATE nnrvv)
+```
+
+`nnrvv` is a static library; its `PUBLIC` include directory is set up so you can immediately `#include "nn_rvv/layers.h"` in your code without any extra `target_include_directories` calls.
+
+### Standalone
 
 ```bash
-make mnist_cnn_mc
-spike -p2 --isa=rv64gcv_zicntr mnist_cnn_mc.riscv   # run on 2 cores
+cmake -S nn-rvv -B build -DCMAKE_TOOLCHAIN_FILE=<your-riscv.cmake>
+cmake --build build
 ```
+
+This produces `build/libnnrvv.a`. The library does not assume a particular `march`/`mabi` — supply those via the toolchain file or `CMAKE_C_FLAGS`. For Saturn-class hardware use `-march=rv64gcv_zfh_zvfh -mabi=lp64d`.
+
+`NN_RVV_MAX_PERF` (default ON) adds `-O3 -funroll-loops -fno-math-errno -fno-trapping-math` to the library sources.
 
 ---
 
-## 📂 Example Models
-
-```bash
-make mnist
-make mnist_cnn
-make mnist_cnn_mc
-make mnist_quant2
-make mnist_quant2_mc
-make mnist_cnn_quant
-make mnist_quant
-```
-
-Run with:
-```bash
-spike --isa=rv64gcv_zicntr <binary>.riscv
-```
-
----
-
-## 🧪 Sample Output
-
-You should ideally see something like this 
-```
-Sample 0 → 7   probs: 0 0 0 0 0 0 0 100 0 0
-Sample 1 → 2   probs: 0 0 100 0 0 0 0 0 0 0
-Sample 2 → 1   probs: 0 100 0 0 0 0 0 0 0 0
-...
-```
-
----
-
-## 📌 Roadmap
-
-- [x] **Full int8 quantization support** (asymmetric zero‑points + bias quantization)  
-- [x] **Basic multithreaded inference** at the task level  
-- [x] **Export weights from PyTorch to C headers**  
-- [ ] **Improve Python → C compilation path** (streamlined front‑ends & code‑gen)  
-- [ ] **Expand convolution kernels** (stride, dilation, padding variants)  
-- [ ] **Optimize & multithread kernels at the RVV level  
-- [ ] **Smarter tiling / parallelism** inside convolution kernels  
-- [ ] **One‑click tooling** for `.py → .h → .c → .riscv` flow  
-- [ ] **Better build‑time diagnostics** (shape checks, warnings, …)
-
----
-
-## 📫 Contact / Contributions
+## 📫 Contact / Contributions
 
 Early‑stage project — **Suggestions, discussions, and PRs are welcome!** 🙂
