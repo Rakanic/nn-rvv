@@ -72,6 +72,72 @@ This produces `build/libnnrvv.a`. The library does not assume a particular `marc
 
 ---
 
+## 🧵 Multi-core threading
+
+nn-rvv ships a lightweight work-stealing runtime selected at **compile time**
+via `NN_RVV_N_HARTS` (default `1`).
+
+| `NN_RVV_N_HARTS` | Behavior |
+|---|---|
+| `1` | No threading runtime is compiled in. `parallel_for` is an inline call to the body; kernels run on the calling hart. |
+| `>= 2` | Per-hart deques + CLINT MSIP wakeups. Hart 0 is the caller; harts 1..N-1 sit in the work-stealing scheduler installed as the linker's secondary-hart entry point (`__main`). |
+
+When `NN_RVV_N_HARTS > 1`, the build links against `clint` + `rocketcore`
+driver targets — those come from this parent project. Standalone builds
+should stay at `NN_RVV_N_HARTS=1` unless the consumer provides equivalent
+targets.
+
+### Public API
+
+```c
+#include "nn_rvv/threading.h"
+
+int main(void) {
+    nn_rvv_threading_init();   // once, on hart 0
+    // ... existing kernel calls — matmul variants now dispatch internally ...
+}
+```
+
+The matmul kernels (`f32_gemm{,_relu,_nobias}`, `int8_qgemm{,_relu}`,
+`int8_qgemm_int32bias{,_relu}`, `int8_qgemm_int32bias_conv1x1{,_relu}`,
+`int8_qgemm_fout`) split the M (output-row) dimension across all
+`NN_RVV_N_HARTS` harts. Other kernels remain single-hart but are
+compatible — they just run on the calling hart, leaving the others idle.
+
+If you need to parallelize your own outer loop, use `nn_rvv_parallel_for`:
+
+```c
+typedef struct { /* your context */ } my_ctx;
+static void my_body(size_t begin, size_t end, void *ctx) {
+    /* process indices [begin, end) */
+}
+my_ctx ctx = {...};
+nn_rvv_parallel_for(/*n=*/work_items, my_body, &ctx);
+```
+
+### Building with threading
+
+Parent build (the parent Makefile passes the value through):
+
+```bash
+make build CHIP=bearly25 TARGET=<your-target> RVV=1 BUILD_NN_RVV=ON NN_RVV_N_HARTS=2
+```
+
+Standalone build (only meaningful if you provide `clint` / `rocketcore`
+targets):
+
+```bash
+cmake -S nn-rvv -B build -DCMAKE_TOOLCHAIN_FILE=<your-riscv.cmake> -DNN_RVV_N_HARTS=2
+cmake --build build
+```
+
+⚠️ A binary cannot simultaneously link both nn-rvv's threading runtime and
+the parent's `thread-lib` — both define `__main`. Pick one per binary
+(either set `NN_RVV_N_HARTS=1` and use the parent's thread-lib, or use
+nn-rvv's threading and drop the thread-lib link).
+
+---
+
 ## 📫 Contact / Contributions
 
 Early‑stage project — **Suggestions, discussions, and PRs are welcome!** 🙂

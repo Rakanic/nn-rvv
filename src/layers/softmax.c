@@ -1,8 +1,48 @@
 #include "nn_rvv/layers.h"
+#include "ops/reduce/reduce.h"
 #include <string.h>
 #include "riscv_vector.h"
 #include <math.h>
 #include "ops/ara/exp.h"
+
+/* In-place 1D softmax over n floats. Three vectorized passes (max,
+ * exp(x-max)+sum, scale). Faster than softmax_vec(channels=n, innerSize=1)
+ * which strip-mines on innerSize and degenerates to scalar at vl=1. */
+void softmax_f32(float *x, size_t n) {
+    if (n == 0) return;
+
+    float max_val = max_f32(x, n);
+
+    float sum = 0.0f;
+    {
+        size_t remaining = n;
+        float *p = x;
+        while (remaining > 0) {
+            size_t vl = __riscv_vsetvl_e32m4(remaining);
+            vfloat32m4_t vx = __riscv_vle32_v_f32m4(p, vl);
+            vx = __riscv_vfsub_vf_f32m4(vx, max_val, vl);
+            vx = __exp_f32m4(vx, vl);
+            __riscv_vse32_v_f32m4(p, vx, vl);
+            vfloat32m1_t vr = __riscv_vfmv_s_f_f32m1(0.0f, 1);
+            vr = __riscv_vfredusum_vs_f32m4_f32m1(vx, vr, vl);
+            sum += __riscv_vfmv_f_s_f32m1_f32(vr);
+            p += vl; remaining -= vl;
+        }
+    }
+
+    float inv = 1.0f / sum;
+    {
+        size_t remaining = n;
+        float *p = x;
+        while (remaining > 0) {
+            size_t vl = __riscv_vsetvl_e32m4(remaining);
+            vfloat32m4_t vx = __riscv_vle32_v_f32m4(p, vl);
+            vx = __riscv_vfmul_vf_f32m4(vx, inv, vl);
+            __riscv_vse32_v_f32m4(p, vx, vl);
+            p += vl; remaining -= vl;
+        }
+    }
+}
 
 void softmax_vec(
     const float *i, 

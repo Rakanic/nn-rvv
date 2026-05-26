@@ -262,6 +262,52 @@ void softmax_vec(
     size_t innerSize
 );
 
+/* In-place vectorized 1D softmax over n floats. */
+void softmax_f32(float *x, size_t n);
+
+/*---------------------------------------------*/
+/*                                             */
+/* Attention                                   */
+/*                                             */
+/*---------------------------------------------*/
+/* Causal multi-head self-attention for a single query token.
+ *
+ *   q              : [n_heads * head_dim]
+ *   K_cache, V_cache: position-major  [seq_len][n_kv_heads][head_dim]
+ *                    (caller passes the per-layer base pointer; the kernel
+ *                     strides between positions by n_kv_heads * head_dim).
+ *   pos            : current position (0-indexed); attention over [0, pos]
+ *   scratch_scores : per-hart-safe scratch (heads write disjoint slices)
+ *   scores_stride  : floats between consecutive head slots in scratch_scores
+ *                    (e.g. seq_len if you have a fixed-size per-head buffer,
+ *                     or pos+1 if you pack tightly)
+ *   out            : [n_heads * head_dim]
+ *
+ * GQA: n_heads must be a multiple of n_kv_heads; query head h reads from
+ * kv head h * n_kv_heads / n_heads.
+ *
+ * attention_f32 runs serially on the calling hart.
+ * attention_mc_f32 splits heads across NN_RVV_N_HARTS via parallel_for. */
+void attention_f32(
+    const float *q,
+    const float *K_cache,
+    const float *V_cache,
+    size_t n_heads, size_t n_kv_heads, size_t head_dim,
+    size_t pos,
+    float *scratch_scores, size_t scores_stride,
+    float *out
+);
+
+void attention_mc_f32(
+    const float *q,
+    const float *K_cache,
+    const float *V_cache,
+    size_t n_heads, size_t n_kv_heads, size_t head_dim,
+    size_t pos,
+    float *scratch_scores, size_t scores_stride,
+    float *out
+);
+
 
 /*---------------------------------------------*/
 /*                                             */

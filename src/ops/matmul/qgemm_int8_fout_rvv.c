@@ -177,8 +177,50 @@ static void qgemm_i8_fout_7xm4(
 }
 
 /* -------------------------------------------------------------------------
- * Public dispatcher: loops over M in tiles of 7 or 1.
+ * Public dispatcher: loops over M in tiles of 7 or 1, parallelized across
+ * NN_RVV_N_HARTS via nn_rvv_parallel_for.
  * ------------------------------------------------------------------------- */
+#include "nn_rvv/threading.h"
+
+typedef struct {
+    size_t N, K;
+    const int8_t* A; size_t a_row_stride;
+    const int8_t* B;
+    float* C; size_t c_row_stride, cm_stride_bytes, c_col_stride;
+    float scale;
+    /* Per-row stride in float elements, precomputed from c_row_stride which
+     * is in bytes (matches the original kernel's `C + row * (c_row_stride /
+     * sizeof(float))` arithmetic). */
+    size_t c_row_stride_elems;
+} int8_qgemm_fout_ctx_t;
+
+static void int8_qgemm_fout_chunk(size_t row_begin, size_t row_end, void* ctx) {
+    int8_qgemm_fout_ctx_t* c = (int8_qgemm_fout_ctx_t*)ctx;
+    size_t row = row_begin;
+    while (row < row_end) {
+        size_t rows_left = row_end - row;
+        if (rows_left >= 7) {
+            qgemm_i8_fout_7xm4(
+                7, c->N, c->K,
+                c->A + row * c->a_row_stride, c->a_row_stride,
+                c->B,
+                c->C + row * c->c_row_stride_elems,
+                c->cm_stride_bytes, c->c_col_stride,
+                c->scale);
+            row += 7;
+        } else {
+            qgemm_i8_fout_1xm4(
+                1, c->N, c->K,
+                c->A + row * c->a_row_stride, c->a_row_stride,
+                c->B,
+                c->C + row * c->c_row_stride_elems,
+                c->cm_stride_bytes, c->c_col_stride,
+                c->scale);
+            row += 1;
+        }
+    }
+}
+
 void int8_qgemm_fout(
     size_t M, size_t N, size_t K,
     const int8_t* A, size_t a_row_stride,
@@ -187,30 +229,15 @@ void int8_qgemm_fout(
     size_t c_col_stride,
     float scale)
 {
-    const size_t cm_stride_bytes = c_row_stride;
-
-    size_t row = 0;
-    while (row < M) {
-        size_t rows_left = M - row;
-
-        if (rows_left >= 7) {
-            qgemm_i8_fout_7xm4(
-                7, N, K,
-                A + row * a_row_stride, a_row_stride,
-                B,
-                C + row * (c_row_stride / sizeof(float)),
-                cm_stride_bytes, c_col_stride,
-                scale);
-            row += 7;
-        } else {
-            qgemm_i8_fout_1xm4(
-                1, N, K,
-                A + row * a_row_stride, a_row_stride,
-                B,
-                C + row * (c_row_stride / sizeof(float)),
-                cm_stride_bytes, c_col_stride,
-                scale);
-            row += 1;
-        }
-    }
+    int8_qgemm_fout_ctx_t ctx = {
+        .N = N, .K = K,
+        .A = A, .a_row_stride = a_row_stride,
+        .B = B,
+        .C = C, .c_row_stride = c_row_stride,
+        .cm_stride_bytes = c_row_stride,
+        .c_col_stride = c_col_stride,
+        .scale = scale,
+        .c_row_stride_elems = c_row_stride / sizeof(float),
+    };
+    nn_rvv_parallel_for(M, int8_qgemm_fout_chunk, &ctx);
 }

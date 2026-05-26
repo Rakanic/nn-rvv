@@ -436,6 +436,78 @@ void xnn_f32_gemm_ukernel_1x4v_relu__rvv(
 }
 
 
+/* ---- parallel_for plumbing -------------------------------------------- */
+/* Each variant (gemm / gemm_nobias / gemm_relu) shares the same outer
+ * row-dispatch logic but calls a different pair of ukernels. We factor that
+ * out via a single context type and three chunk runners (one per variant)
+ * so the inner ukernel calls remain direct (no indirect call in hot path). */
+#include "nn_rvv/threading.h"
+
+typedef struct {
+    size_t N, kc_bytes;
+    const float* A; size_t a_row_stride, a_stride_bytes;
+    const float* B;
+    float* C; size_t c_row_stride, cm_stride_bytes, cn_stride_bytes;
+} f32_gemm_ctx_t;
+
+#define F32_GEMM_CHUNK_BODY(UK7, UK1)                                           \
+    f32_gemm_ctx_t* c = (f32_gemm_ctx_t*)ctx;                                   \
+    size_t row = row_begin;                                                     \
+    while (row < row_end) {                                                     \
+        size_t rows_left = row_end - row;                                       \
+        if (rows_left >= 7) {                                                   \
+            UK7(7, c->N, c->kc_bytes,                                           \
+                c->A + row * c->a_row_stride, c->a_stride_bytes,                \
+                c->B,                                                           \
+                c->C + row * c->c_row_stride, c->cm_stride_bytes,               \
+                c->cn_stride_bytes);                                            \
+            row += 7;                                                           \
+        } else {                                                                \
+            UK1(1, c->N, c->kc_bytes,                                           \
+                c->A + row * c->a_row_stride, c->a_stride_bytes,                \
+                c->B,                                                           \
+                c->C + row * c->c_row_stride, c->cm_stride_bytes,               \
+                c->cn_stride_bytes);                                            \
+            row += 1;                                                           \
+        }                                                                       \
+    }
+
+static void f32_gemm_chunk(size_t row_begin, size_t row_end, void* ctx) {
+    F32_GEMM_CHUNK_BODY(xnn_f32_gemm_ukernel_7x4v__rvv,
+                        xnn_f32_gemm_ukernel_1x4v__rvv)
+}
+static void f32_gemm_nobias_chunk(size_t row_begin, size_t row_end, void* ctx) {
+    F32_GEMM_CHUNK_BODY(xnn_f32_gemm_ukernel_7x4v__rvv_nobias,
+                        xnn_f32_gemm_ukernel_1x4v__rvv_nobias)
+}
+static void f32_gemm_relu_chunk(size_t row_begin, size_t row_end, void* ctx) {
+    F32_GEMM_CHUNK_BODY(xnn_f32_gemm_ukernel_7x4v_relu__rvv,
+                        xnn_f32_gemm_ukernel_1x4v_relu__rvv)
+}
+
+#undef F32_GEMM_CHUNK_BODY
+
+static inline f32_gemm_ctx_t make_f32_ctx(
+    size_t N, size_t K,
+    const float* A, size_t a_row_stride,
+    const float* B,
+    float* C, size_t c_row_stride, size_t c_col_stride)
+{
+    f32_gemm_ctx_t c = {
+        .N               = N,
+        .kc_bytes        = K * sizeof(float),
+        .A               = A,
+        .a_row_stride    = a_row_stride,
+        .a_stride_bytes  = a_row_stride * sizeof(float),
+        .B               = B,
+        .C               = C,
+        .c_row_stride    = c_row_stride,
+        .cm_stride_bytes = c_row_stride * sizeof(float),
+        .cn_stride_bytes = c_col_stride * sizeof(float),
+    };
+    return c;
+}
+
 void f32_gemm(
   size_t M, size_t N, size_t K,
   const float* A, size_t a_row_stride,
@@ -443,43 +515,8 @@ void f32_gemm(
   float* C, size_t c_row_stride,
   size_t c_col_stride)
 {
-  const size_t kc_bytes = K * sizeof(float);
-  const size_t a_stride_bytes = a_row_stride * sizeof(float);
-  const size_t cm_stride_bytes = c_row_stride * sizeof(float);
-  const size_t cn_stride_bytes = c_col_stride * sizeof(float);
-
-  size_t row = 0;
-  while (row < M) {
-      size_t rows_left = M - row;
-
-      if (rows_left >= 7) {
-          xnn_f32_gemm_ukernel_7x4v__rvv(
-              7,
-              N,
-              kc_bytes,
-              A + row * a_row_stride,
-              a_stride_bytes,
-              B,
-              C + row * c_row_stride,
-              cm_stride_bytes,
-              cn_stride_bytes
-          );
-          row += 7;
-      } else {
-          xnn_f32_gemm_ukernel_1x4v__rvv(
-              1,
-              N,
-              kc_bytes,
-              A + row * a_row_stride,
-              a_stride_bytes,
-              B,
-              C + row * c_row_stride,
-              cm_stride_bytes,
-              cn_stride_bytes
-          );
-          row += 1;
-      }
-  }
+    f32_gemm_ctx_t ctx = make_f32_ctx(N, K, A, a_row_stride, B, C, c_row_stride, c_col_stride);
+    nn_rvv_parallel_for(M, f32_gemm_chunk, &ctx);
 }
 
 void f32_gemm_nobias(
@@ -489,43 +526,8 @@ void f32_gemm_nobias(
   float* C, size_t c_row_stride,
   size_t c_col_stride)
 {
-  const size_t kc_bytes = K * sizeof(float);
-  const size_t a_stride_bytes = a_row_stride * sizeof(float);
-  const size_t cm_stride_bytes = c_row_stride * sizeof(float);
-  const size_t cn_stride_bytes = c_col_stride * sizeof(float);
-
-  size_t row = 0;
-  while (row < M) {
-      size_t rows_left = M - row;
-
-      if (rows_left >= 7) {
-          xnn_f32_gemm_ukernel_7x4v__rvv_nobias(
-              7,
-              N,
-              kc_bytes,
-              A + row * a_row_stride,
-              a_stride_bytes,
-              B,
-              C + row * c_row_stride,
-              cm_stride_bytes,
-              cn_stride_bytes
-          );
-          row += 7;
-      } else {
-          xnn_f32_gemm_ukernel_1x4v__rvv_nobias(
-              1,
-              N,
-              kc_bytes,
-              A + row * a_row_stride,
-              a_stride_bytes,
-              B,
-              C + row * c_row_stride,
-              cm_stride_bytes,
-              cn_stride_bytes
-          );
-          row += 1;
-      }
-  }
+    f32_gemm_ctx_t ctx = make_f32_ctx(N, K, A, a_row_stride, B, C, c_row_stride, c_col_stride);
+    nn_rvv_parallel_for(M, f32_gemm_nobias_chunk, &ctx);
 }
 
 void f32_gemm_relu(
@@ -535,41 +537,7 @@ void f32_gemm_relu(
   float* C, size_t c_row_stride,
   size_t c_col_stride)
 {
-  const size_t kc_bytes = K * sizeof(float);
-  const size_t a_stride_bytes = a_row_stride * sizeof(float);
-  const size_t cm_stride_bytes = c_row_stride * sizeof(float);
-  const size_t cn_stride_bytes = c_col_stride * sizeof(float);
-
-  size_t row = 0;
-  while (row < M) {
-      size_t rows_left = M - row;
-
-      if (rows_left >= 7) {
-          xnn_f32_gemm_ukernel_7x4v_relu__rvv(
-              7,
-              N,
-              kc_bytes,
-              A + row * a_row_stride,
-              a_stride_bytes,
-              B,
-              C + row * c_row_stride,
-              cm_stride_bytes,
-              cn_stride_bytes
-          );
-          row += 7;
-      } else {
-          xnn_f32_gemm_ukernel_1x4v_relu__rvv(
-              1,
-              N,
-              kc_bytes,
-              A + row * a_row_stride,
-              a_stride_bytes,
-              B,
-              C + row * c_row_stride,
-              cm_stride_bytes,
-              cn_stride_bytes
-          );
-          row += 1;
-      }
-  }
+    f32_gemm_ctx_t ctx = make_f32_ctx(N, K, A, a_row_stride, B, C, c_row_stride, c_col_stride);
+    nn_rvv_parallel_for(M, f32_gemm_relu_chunk, &ctx);
 }
+

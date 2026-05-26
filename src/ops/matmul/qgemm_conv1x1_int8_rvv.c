@@ -508,57 +508,50 @@ void qgemm_i8_i32_1xm4_int32_conv1x1_relu(
   } while (nc != 0);
 }
 
-void int8_qgemm_int32bias_conv1x1_relu(
-    size_t M, size_t N, size_t K,
-    const void* A, size_t a_row_stride,
-    const int8_t* B,
-    int8_t* C, size_t c_row_stride,
-    size_t c_col_stride,
-    requantization_params_t requant_params)
-{
-    const size_t kc_bytes = K;
-    const size_t a_stride_bytes = a_row_stride;
-    const size_t cm_stride_bytes = c_row_stride;
-    const size_t cn_stride_bytes = c_col_stride;
+#include "nn_rvv/threading.h"
 
-    size_t row = 0;
-    while (row < M) {
-        size_t rows_left = M - row;
+typedef struct {
+    size_t M, N, kc_bytes;
+    const void* A; size_t a_row_stride;
+    const int8_t* B;
+    int8_t* C; size_t c_row_stride, c_col_stride;
+    requantization_params_t requant_params;
+} int8_conv1x1_ctx_t;
 
-        if (rows_left >= 7) {
-            qgemm_i8_i32_7xm4_int32_conv1x1_relu(
-                M,
-                N,
-                kc_bytes,
-                A,
-                a_stride_bytes,
-                B,
-                C + row * c_row_stride,
-                cm_stride_bytes,
-                cn_stride_bytes,
-                requant_params, 
-                row
-            );
-            row += 7;
-        } else {
-            qgemm_i8_i32_1xm4_int32_conv1x1_relu(
-                M,
-                N,
-                kc_bytes,
-                A,
-                a_stride_bytes,
-                B,
-                C + row * c_row_stride,
-                cm_stride_bytes,
-                cn_stride_bytes,
-                requant_params,
-                row
-            );
-            row += 1;
-        }
+/* Note: the conv1x1 ukernels take the full M plus the current row offset
+ * (so the packed-weights layout in A can be indexed correctly). The row
+ * offset is the dispatched chunk's local position. */
+#define INT8_CONV1X1_CHUNK_BODY(UK7, UK1)                                       \
+    int8_conv1x1_ctx_t* c = (int8_conv1x1_ctx_t*)ctx;                           \
+    size_t row = row_begin;                                                     \
+    while (row < row_end) {                                                     \
+        size_t rows_left = row_end - row;                                       \
+        if (rows_left >= 7) {                                                   \
+            UK7(c->M, c->N, c->kc_bytes,                                        \
+                c->A, c->a_row_stride,                                          \
+                c->B,                                                           \
+                c->C + row * c->c_row_stride, c->c_row_stride,                  \
+                c->c_col_stride, c->requant_params, row);                       \
+            row += 7;                                                           \
+        } else {                                                                \
+            UK1(c->M, c->N, c->kc_bytes,                                        \
+                c->A, c->a_row_stride,                                          \
+                c->B,                                                           \
+                c->C + row * c->c_row_stride, c->c_row_stride,                  \
+                c->c_col_stride, c->requant_params, row);                       \
+            row += 1;                                                           \
+        }                                                                       \
     }
-}
 
+static void int8_conv1x1_chunk(size_t row_begin, size_t row_end, void* ctx) {
+    INT8_CONV1X1_CHUNK_BODY(qgemm_i8_i32_7xm4_int32_conv1x1,
+                            qgemm_i8_i32_1xm4_int32_conv1x1)
+}
+static void int8_conv1x1_relu_chunk(size_t row_begin, size_t row_end, void* ctx) {
+    INT8_CONV1X1_CHUNK_BODY(qgemm_i8_i32_7xm4_int32_conv1x1_relu,
+                            qgemm_i8_i32_1xm4_int32_conv1x1_relu)
+}
+#undef INT8_CONV1X1_CHUNK_BODY
 
 void int8_qgemm_int32bias_conv1x1(
     size_t M, size_t N, size_t K,
@@ -568,45 +561,30 @@ void int8_qgemm_int32bias_conv1x1(
     size_t c_col_stride,
     requantization_params_t requant_params)
 {
-    const size_t kc_bytes = K;
-    const size_t a_stride_bytes = a_row_stride;
-    const size_t cm_stride_bytes = c_row_stride;
-    const size_t cn_stride_bytes = c_col_stride;
+    int8_conv1x1_ctx_t ctx = {
+        .M = M, .N = N, .kc_bytes = K,
+        .A = A, .a_row_stride = a_row_stride,
+        .B = B,
+        .C = C, .c_row_stride = c_row_stride, .c_col_stride = c_col_stride,
+        .requant_params = requant_params,
+    };
+    nn_rvv_parallel_for(M, int8_conv1x1_chunk, &ctx);
+}
 
-    size_t row = 0;
-    while (row < M) {
-        size_t rows_left = M - row;
-
-        if (rows_left >= 7) {
-            qgemm_i8_i32_7xm4_int32_conv1x1(
-                M,
-                N,
-                kc_bytes,
-                A,
-                a_stride_bytes,
-                B,
-                C + row * c_row_stride,
-                cm_stride_bytes,
-                cn_stride_bytes,
-                requant_params, 
-                row
-            );
-            row += 7;
-        } else {
-            qgemm_i8_i32_1xm4_int32_conv1x1(
-                M,
-                N,
-                kc_bytes,
-                A,
-                a_stride_bytes,
-                B,
-                C + row * c_row_stride,
-                cm_stride_bytes,
-                cn_stride_bytes,
-                requant_params,
-                row
-            );
-            row += 1;
-        }
-    }
+void int8_qgemm_int32bias_conv1x1_relu(
+    size_t M, size_t N, size_t K,
+    const void* A, size_t a_row_stride,
+    const int8_t* B,
+    int8_t* C, size_t c_row_stride,
+    size_t c_col_stride,
+    requantization_params_t requant_params)
+{
+    int8_conv1x1_ctx_t ctx = {
+        .M = M, .N = N, .kc_bytes = K,
+        .A = A, .a_row_stride = a_row_stride,
+        .B = B,
+        .C = C, .c_row_stride = c_row_stride, .c_col_stride = c_col_stride,
+        .requant_params = requant_params,
+    };
+    nn_rvv_parallel_for(M, int8_conv1x1_relu_chunk, &ctx);
 }

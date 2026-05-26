@@ -477,6 +477,48 @@ void qgemm_i8_i32_1xm4_int32bias(
   } while (nc != 0);
 }
 
+#include "nn_rvv/threading.h"
+
+typedef struct {
+    size_t N, kc_bytes;
+    const int8_t* A; size_t a_row_stride;
+    const void* B;
+    int8_t* C; size_t c_row_stride, c_col_stride;
+    requantization_params_t requant_params;
+} int8_qgemm_int32bias_ctx_t;
+
+#define INT8_QGEMM_INT32BIAS_CHUNK_BODY(UK7, UK1)                               \
+    int8_qgemm_int32bias_ctx_t* c = (int8_qgemm_int32bias_ctx_t*)ctx;           \
+    size_t row = row_begin;                                                     \
+    while (row < row_end) {                                                     \
+        size_t rows_left = row_end - row;                                       \
+        if (rows_left >= 7) {                                                   \
+            UK7(7, c->N, c->kc_bytes,                                           \
+                c->A + row * c->a_row_stride, c->a_row_stride,                  \
+                c->B,                                                           \
+                c->C + row * c->c_row_stride, c->c_row_stride,                  \
+                c->c_col_stride, c->requant_params);                            \
+            row += 7;                                                           \
+        } else {                                                                \
+            UK1(1, c->N, c->kc_bytes,                                           \
+                c->A + row * c->a_row_stride, c->a_row_stride,                  \
+                c->B,                                                           \
+                c->C + row * c->c_row_stride, c->c_row_stride,                  \
+                c->c_col_stride, c->requant_params);                            \
+            row += 1;                                                           \
+        }                                                                       \
+    }
+
+static void int8_qgemm_int32bias_chunk(size_t row_begin, size_t row_end, void* ctx) {
+    INT8_QGEMM_INT32BIAS_CHUNK_BODY(qgemm_i8_i32_7xm4_int32bias,
+                                    qgemm_i8_i32_1xm4_int32bias)
+}
+static void int8_qgemm_int32bias_relu_chunk(size_t row_begin, size_t row_end, void* ctx) {
+    INT8_QGEMM_INT32BIAS_CHUNK_BODY(qgemm_i8_i32_7xm4_int32bias_relu,
+                                    qgemm_i8_i32_1xm4_int32bias_relu)
+}
+#undef INT8_QGEMM_INT32BIAS_CHUNK_BODY
+
 void int8_qgemm_int32bias(
     size_t M, size_t N, size_t K,
     const int8_t* A, size_t a_row_stride,
@@ -485,45 +527,14 @@ void int8_qgemm_int32bias(
     size_t c_col_stride,
     requantization_params_t requant_params)
 {
-    const size_t kc_bytes = K;
-    const size_t a_stride_bytes = a_row_stride;
-    const size_t cm_stride_bytes = c_row_stride;
-    const size_t cn_stride_bytes = c_col_stride;
-
-    size_t row = 0;
-    while (row < M) {
-        size_t rows_left = M - row;
-
-        if (rows_left >= 7) {
-            qgemm_i8_i32_7xm4_int32bias(
-                7,
-                N,
-                kc_bytes,
-                A + row * a_row_stride,
-                a_stride_bytes,
-                B,
-                C + row * c_row_stride,
-                cm_stride_bytes,
-                cn_stride_bytes,
-                requant_params
-            );
-            row += 7;
-        } else {
-            qgemm_i8_i32_1xm4_int32bias(
-                1,
-                N,
-                kc_bytes,
-                A + row * a_row_stride,
-                a_stride_bytes,
-                B,
-                C + row * c_row_stride,
-                cm_stride_bytes,
-                cn_stride_bytes,
-                requant_params
-            );
-            row += 1;
-        }
-    }
+    int8_qgemm_int32bias_ctx_t ctx = {
+        .N = N, .kc_bytes = K,
+        .A = A, .a_row_stride = a_row_stride,
+        .B = B,
+        .C = C, .c_row_stride = c_row_stride, .c_col_stride = c_col_stride,
+        .requant_params = requant_params,
+    };
+    nn_rvv_parallel_for(M, int8_qgemm_int32bias_chunk, &ctx);
 }
 
 void int8_qgemm_int32bias_relu(
@@ -534,44 +545,13 @@ void int8_qgemm_int32bias_relu(
     size_t c_col_stride,
     requantization_params_t requant_params)
 {
-    const size_t kc_bytes = K;
-    const size_t a_stride_bytes = a_row_stride;
-    const size_t cm_stride_bytes = c_row_stride;
-    const size_t cn_stride_bytes = c_col_stride;
-
-    size_t row = 0;
-    while (row < M) {
-        size_t rows_left = M - row;
-
-        if (rows_left >= 7) {
-            qgemm_i8_i32_7xm4_int32bias_relu(
-                7,
-                N,
-                kc_bytes,
-                A + row * a_row_stride,
-                a_stride_bytes,
-                B,
-                C + row * c_row_stride,
-                cm_stride_bytes,
-                cn_stride_bytes,
-                requant_params
-            );
-            row += 7;
-        } else {
-            qgemm_i8_i32_1xm4_int32bias_relu(
-                1,
-                N,
-                kc_bytes,
-                A + row * a_row_stride,
-                a_stride_bytes,
-                B,
-                C + row * c_row_stride,
-                cm_stride_bytes,
-                cn_stride_bytes,
-                requant_params
-            );
-            row += 1;
-        }
-    }
+    int8_qgemm_int32bias_ctx_t ctx = {
+        .N = N, .kc_bytes = K,
+        .A = A, .a_row_stride = a_row_stride,
+        .B = B,
+        .C = C, .c_row_stride = c_row_stride, .c_col_stride = c_col_stride,
+        .requant_params = requant_params,
+    };
+    nn_rvv_parallel_for(M, int8_qgemm_int32bias_relu_chunk, &ctx);
 }
 
