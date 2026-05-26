@@ -9,7 +9,7 @@ Public surface is a single header (`nn_rvv/layers.h`) plus an optional
 threading header (`nn_rvv/threading.h`). The kernels themselves expose
 `parallel_for` internally, so any matmul/attention/rope/etc. call fans out
 across `NN_RVV_N_HARTS` harts automatically. Reference example programs
-(MNIST variants, ...) live separately at `nn-rvv-examples/` in the parent.
+(MNIST variants, ...) should be added separately to a the parent [Baremetal-IDE](https://github.com/ucb-bar/Baremetal-IDE).
 
 ## Kernels
 
