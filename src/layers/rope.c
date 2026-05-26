@@ -74,3 +74,41 @@ void rope_f32(
     };
     nn_rvv_parallel_for(head_size / 2, rope_chunk, &ctx);
 }
+
+/* NeoX-style RoPE on one seq position.
+ *   For each head, with half = head_dim/2 and d in [0, half):
+ *     x'[d]        = x[d] * cos[d] - x[half+d] * sin[d]
+ *     x'[half + d] = x[d] * sin[d] + x[half+d] * cos[d]
+ *
+ * `cos` and `sin` point at the head_dim-long table for THIS seq position;
+ * we only read the first `half` entries (the table is duplicated in
+ * qwen-asr's layout — the duplication is unused here). */
+void rope_neox_apply_f32(float *x,
+                         const float *cos_vals, const float *sin_vals,
+                         size_t n_heads, size_t head_dim)
+{
+    size_t half = head_dim / 2;
+    for (size_t h = 0; h < n_heads; h++) {
+        float *v1 = x + h * head_dim;          /* first half (d=0..half-1)  */
+        float *v2 = v1 + half;                 /* second half               */
+        const float *c = cos_vals;
+        const float *s = sin_vals;
+        size_t remaining = half;
+        while (remaining > 0) {
+            size_t vl = __riscv_vsetvl_e32m4(remaining);
+            vfloat32m4_t x1 = __riscv_vle32_v_f32m4(v1, vl);
+            vfloat32m4_t x2 = __riscv_vle32_v_f32m4(v2, vl);
+            vfloat32m4_t cv = __riscv_vle32_v_f32m4(c,  vl);
+            vfloat32m4_t sv = __riscv_vle32_v_f32m4(s,  vl);
+            /* n1 = x1*c - x2*s */
+            vfloat32m4_t n1 = __riscv_vfmul_vv_f32m4(x1, cv, vl);
+            n1              = __riscv_vfnmsac_vv_f32m4(n1, x2, sv, vl);
+            /* n2 = x1*s + x2*c */
+            vfloat32m4_t n2 = __riscv_vfmul_vv_f32m4(x1, sv, vl);
+            n2              = __riscv_vfmacc_vv_f32m4(n2, x2, cv, vl);
+            __riscv_vse32_v_f32m4(v1, n1, vl);
+            __riscv_vse32_v_f32m4(v2, n2, vl);
+            v1 += vl; v2 += vl; c += vl; s += vl; remaining -= vl;
+        }
+    }
+}

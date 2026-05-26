@@ -58,6 +58,23 @@ void transpose_f32  (const float *input, float *output, size_t rows, size_t cols
 /* RMS norm: out[i] = weight[i] * in[i] / sqrt(mean(in^2) + eps). */
 void rmsnorm_f32(float *out, const float *in, const float *weight, size_t size);
 
+/* LayerNorm:  out[i] = (in[i] - mean) / sqrt(var + eps) * weight[i] + bias[i].
+ * weight or bias may be NULL (plain LN). */
+void layer_norm_f32(float *out, const float *in,
+                    const float *weight, const float *bias,
+                    size_t size, float eps);
+
+/*---------------------------------------------*/
+/*                                             */
+/* Activations                                 */
+/*                                             */
+/*---------------------------------------------*/
+void silu_f32(float *x, size_t n);              /* x[i] = x[i] / (1 + exp(-x[i]))                  */
+void gelu_f32(float *x, size_t n);              /* GELU (tanh approximation), in place              */
+
+/* Fused SwiGLU multiply: out[i] = SiLU(gate_up[2i]) * gate_up[2i+1], i in [0, inter). */
+void swiglu_multiply_f32(float *out, const float *gate_up, size_t inter);
+
 /*---------------------------------------------*/
 /*                                             */
 /* Positional encoding                         */
@@ -70,6 +87,37 @@ void rope_f32(
     size_t n_heads, size_t n_kv_heads, size_t head_size,
     size_t pos
 );
+
+/* NeoX-style RoPE: rotates the two halves of each head against each other.
+ *   x [n_heads * head_dim] for one seq position; cos/sin are per-seq tables
+ *   of length head_dim (we read the first head_dim/2 entries). */
+void rope_neox_apply_f32(float *x,
+                         const float *cos_vals, const float *sin_vals,
+                         size_t n_heads, size_t head_dim);
+
+/*---------------------------------------------*/
+/*                                             */
+/* Dense 2D Convolution (im2col + GEMM)        */
+/*                                             */
+/*---------------------------------------------*/
+/* Dense (non-depthwise) Conv2D with optional bias.
+ *
+ *   in           [c_in × h_in × w_in]                  CHW input
+ *   weight       [c_out × c_in × kh × kw]              dense kernel
+ *   bias         [c_out] or NULL                       per-output-channel bias
+ *   cols_scratch [c_in*kh*kw × h_out*w_out]            caller-provided
+ *   out          [c_out × h_out × w_out]               CHW output
+ *
+ * h_out, w_out are derived from h_in/w_in/kh/kw/stride/padding (VALID/SAME).
+ * The kernel does not allocate. */
+void conv2d_f32(float *out,
+                const float *in,
+                const float *weight,
+                const float *bias,
+                float *cols_scratch,
+                size_t c_in, size_t h_in, size_t w_in,
+                size_t c_out, size_t kh, size_t kw,
+                size_t stride, size_t padding);
 
 /*---------------------------------------------*/
 /*                                             */
@@ -286,6 +334,22 @@ void softmax_vec(
 
 /* In-place vectorized 1D softmax over n floats. */
 void softmax_f32(float *x, size_t n);
+
+/*---------------------------------------------*/
+/*                                             */
+/* Vector primitives                           */
+/*                                             */
+/*---------------------------------------------*/
+/* Elementwise (vectorized, single-hart). */
+void fill_f32(float *y, float c, size_t n);                                 /* y[i] = c                       */
+void axpy_f32(float *y, float a, const float *x, size_t n);                 /* y[i] += a * x[i]               */
+void scale_add_f32(float *y, const float *x, float a, float b, size_t n);   /* y[i] =  a * x[i] + b           */
+
+/* Reductions (vectorized, single-hart). */
+float dot_f32(const float *a, const float *b, size_t n);                    /* sum_i a[i] * b[i]              */
+float f32_bf16_dot(const float *a, const uint16_t *b_bf16, size_t n);       /* sum_i a[i] * bf16_to_f32(b[i]) */
+float sum_f32(const float *x, size_t n);                                    /* sum_i x[i]                     */
+float max_f32(const float *x, size_t n);                                    /* max_i x[i] (n > 0)             */
 
 /*---------------------------------------------*/
 /*                                             */

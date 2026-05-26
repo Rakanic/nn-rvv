@@ -170,4 +170,10 @@ void dwconv_5x5_int8_VCO_relu(
     requantization_params_t requant_params
 );
 
+/* im2col reshape used by the generic dense conv2d_f32 layer. */
+void im2col_f32(const float *in, float *cols,
+                size_t c_in, size_t h_in, size_t w_in,
+                size_t kh, size_t kw, size_t stride, size_t padding,
+                size_t h_out, size_t w_out);
+
 #endif /* NN_RVV_OPS_CONV2D_H */
