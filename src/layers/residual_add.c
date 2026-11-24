@@ -36,6 +36,8 @@ void residual_add(
             vfacc = __riscv_vfcvt_f_x_v_f32m4(add_ab32, vl);
             vfacc = __riscv_vfmul_vf_f32m4(vfacc, scale, vl);
             vout16 = __riscv_vfncvt_x_f_w_i16m2(vfacc, vl);
+            vout16 = __riscv_vmax_vx_i16m2(vout16, -128, vl);
+            vout16 = __riscv_vmin_vx_i16m2(vout16, 127, vl);
             vout8 = __riscv_vncvt_x_x_w_i8m1(vout16, vl);
             __riscv_vse8_v_i8m1(output, vout8, vl);
 
