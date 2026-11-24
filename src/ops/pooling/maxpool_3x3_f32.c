@@ -40,7 +40,7 @@ void f32_maxpool_ukernel_3x3__rvv_str1(
       register vfloat32m2_t i7_f32v = __riscv_vle32_v_f32m2(i1, vl); i1 += input_cols;
       register vfloat32m2_t i8_f32v = __riscv_vle32_v_f32m2(i2, vl); i2 += input_cols;
   
-      do {
+      while (rows != 0) {
         outv1 = __riscv_vfmax_vv_f32m2(__riscv_vfmax_vv_f32m2(outv1, i6_f32v, vl), __riscv_vfmax_vv_f32m2(i7_f32v, i8_f32v, vl), vl);
         outv2 = __riscv_vfmax_vv_f32m2(__riscv_vfmax_vv_f32m2(outv2, i6_f32v, vl), __riscv_vfmax_vv_f32m2(i7_f32v, i8_f32v, vl), vl);
         __riscv_vse32_v_f32m2(o, outv1, vl); o += output_cols; 
@@ -62,7 +62,7 @@ void f32_maxpool_ukernel_3x3__rvv_str1(
         i8_f32v = __riscv_vle32_v_f32m2(i2, vl); i2 += input_cols;
   
         rows -= 2;
-      } while (rows != 0);
+      }
   
       outv1 = __riscv_vfmax_vv_f32m2(__riscv_vfmax_vv_f32m2(outv1, i6_f32v, vl), __riscv_vfmax_vv_f32m2(i7_f32v, i8_f32v, vl), vl);
       outv2 = __riscv_vfmax_vv_f32m2(__riscv_vfmax_vv_f32m2(outv2, i6_f32v, vl), __riscv_vfmax_vv_f32m2(i7_f32v, i8_f32v, vl), vl);
@@ -110,7 +110,7 @@ void f32_maxpool_ukernel_3x3__rvv_str2(
       register vfloat32m4_t i4_f32v = __riscv_vlse32_v_f32m4(i1, 4*2, vl); i1 += input_cols;
       register vfloat32m4_t i5_f32v = __riscv_vlse32_v_f32m4(i2, 4*2, vl); i2 += input_cols;
   
-      do {
+      while (rows != 0) {
         // printf("rows: %d \n", rows);
         outv1 = __riscv_vfmax_vv_f32m4(__riscv_vfmax_vv_f32m4(outv1, i3_f32v, vl), __riscv_vfmax_vv_f32m4(i4_f32v, i5_f32v, vl), vl);
   
@@ -127,7 +127,7 @@ void f32_maxpool_ukernel_3x3__rvv_str2(
         i5_f32v = __riscv_vlse32_v_f32m4(i2, 4*2, vl); i2 += input_cols;
   
         rows -= 1;
-      } while (rows != 0);
+      }
   
       outv1 = __riscv_vfmax_vv_f32m4(__riscv_vfmax_vv_f32m4(outv1, i3_f32v, vl), __riscv_vfmax_vv_f32m4(i4_f32v, i5_f32v, vl), vl);
   
