@@ -30,6 +30,8 @@ void transpose_int8 (int8_t* input, int8_t* output, size_t rows, size_t cols) {
     int8_t* sp_2 = output;
     size_t r = rows;
 
+    if (rows == 0 || cols == 0) return;
+
     do {
         size_t c = cols;
         const int8_t* i = input + cols*(r - rows);
