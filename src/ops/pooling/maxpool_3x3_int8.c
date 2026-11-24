@@ -100,40 +100,40 @@ void int8_maxpool_ukernel_3x3__rvv_str2(
       register const int8_t* i1 = i + 1;
       register const int8_t* i2 = i + 2;
   
-      register vint8m4_t i0_f32v = __riscv_vlse8_v_i8m4(i0, 4*2, vl); i0 += input_cols;
-      register vint8m4_t i1_f32v = __riscv_vlse8_v_i8m4(i1, 4*2, vl); i1 += input_cols;
-      register vint8m4_t i2_f32v = __riscv_vlse8_v_i8m4(i2, 4*2, vl); i2 += input_cols;
+      register vint8m4_t i0_f32v = __riscv_vlse8_v_i8m4(i0, 1*2, vl); i0 += input_cols;
+      register vint8m4_t i1_f32v = __riscv_vlse8_v_i8m4(i1, 1*2, vl); i1 += input_cols;
+      register vint8m4_t i2_f32v = __riscv_vlse8_v_i8m4(i2, 1*2, vl); i2 += input_cols;
       
       outv1 = __riscv_vmax_vv_i8m4(i2_f32v, __riscv_vmax_vv_i8m4(i0_f32v, i1_f32v, vl), vl);
       
-      register vint8m4_t i3_f32v = __riscv_vlse8_v_i8m4(i0, 4*2, vl); i0 += input_cols;
-      register vint8m4_t i4_f32v = __riscv_vlse8_v_i8m4(i1, 4*2, vl); i1 += input_cols;
-      register vint8m4_t i5_f32v = __riscv_vlse8_v_i8m4(i2, 4*2, vl); i2 += input_cols;
+      register vint8m4_t i3_f32v = __riscv_vlse8_v_i8m4(i0, 1*2, vl); i0 += input_cols;
+      register vint8m4_t i4_f32v = __riscv_vlse8_v_i8m4(i1, 1*2, vl); i1 += input_cols;
+      register vint8m4_t i5_f32v = __riscv_vlse8_v_i8m4(i2, 1*2, vl); i2 += input_cols;
   
       do {
         // printf("rows: %d \n", rows);
         outv1 = __riscv_vmax_vv_i8m4(__riscv_vmax_vv_i8m4(outv1, i3_f32v, vl), __riscv_vmax_vv_i8m4(i4_f32v, i5_f32v, vl), vl);
   
-        i0_f32v = __riscv_vlse8_v_i8m4(i0, 4*2, vl); i0 += input_cols;
-        i1_f32v = __riscv_vlse8_v_i8m4(i1, 4*2, vl); i1 += input_cols;
-        i2_f32v = __riscv_vlse8_v_i8m4(i2, 4*2, vl); i2 += input_cols;
+        i0_f32v = __riscv_vlse8_v_i8m4(i0, 1*2, vl); i0 += input_cols;
+        i1_f32v = __riscv_vlse8_v_i8m4(i1, 1*2, vl); i1 += input_cols;
+        i2_f32v = __riscv_vlse8_v_i8m4(i2, 1*2, vl); i2 += input_cols;
   
         outv1 = __riscv_vmax_vv_i8m4(__riscv_vmax_vv_i8m4(outv1, i0_f32v, vl), __riscv_vmax_vv_i8m4(i1_f32v, i2_f32v, vl), vl);
         __riscv_vse8_v_i8m4(o, outv1, vl); o += output_cols; 
         outv1 = __riscv_vmax_vv_i8m4(i0_f32v, __riscv_vmax_vv_i8m4(i1_f32v, i2_f32v, vl), vl);
         
-        i3_f32v = __riscv_vlse8_v_i8m4(i0, 4*2, vl); i0 += input_cols;
-        i4_f32v = __riscv_vlse8_v_i8m4(i1, 4*2, vl); i1 += input_cols;
-        i5_f32v = __riscv_vlse8_v_i8m4(i2, 4*2, vl); i2 += input_cols;
+        i3_f32v = __riscv_vlse8_v_i8m4(i0, 1*2, vl); i0 += input_cols;
+        i4_f32v = __riscv_vlse8_v_i8m4(i1, 1*2, vl); i1 += input_cols;
+        i5_f32v = __riscv_vlse8_v_i8m4(i2, 1*2, vl); i2 += input_cols;
   
         rows -= 1;
       } while (rows != 0);
   
       outv1 = __riscv_vmax_vv_i8m4(__riscv_vmax_vv_i8m4(outv1, i3_f32v, vl), __riscv_vmax_vv_i8m4(i4_f32v, i5_f32v, vl), vl);
   
-      i0_f32v = __riscv_vlse8_v_i8m4(i0, 4*2, vl); i0 += input_cols;
-      i1_f32v = __riscv_vlse8_v_i8m4(i1, 4*2, vl); i1 += input_cols;
-      i2_f32v = __riscv_vlse8_v_i8m4(i2, 4*2, vl); i2 += input_cols;
+      i0_f32v = __riscv_vlse8_v_i8m4(i0, 1*2, vl); i0 += input_cols;
+      i1_f32v = __riscv_vlse8_v_i8m4(i1, 1*2, vl); i1 += input_cols;
+      i2_f32v = __riscv_vlse8_v_i8m4(i2, 1*2, vl); i2 += input_cols;
   
       outv1 = __riscv_vmax_vv_i8m4(__riscv_vmax_vv_i8m4(outv1, i0_f32v, vl), __riscv_vmax_vv_i8m4(i1_f32v, i2_f32v, vl), vl);
       __riscv_vse8_v_i8m4(o, outv1, vl);
